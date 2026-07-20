@@ -1,6 +1,6 @@
 ---
 name: "aiws-validate-knowledge"
-description: "Validates newly added knowledge entries against the knowledge/ layer taxonomy and YAML front-matter schema. Compares the current branch against remote master, finds every new knowledge file, checks folder placement, filename casing, required front-matter fields, and body structure, then reports a clear pass/fail result with actionable fixes. No files are created or modified."
+description: "Validates newly added knowledge entries against the knowledge/ layer taxonomy and YAML front-matter schema. Compares the current branch against the base branch, finds every new knowledge file, checks folder placement, filename casing, required front-matter fields, and body structure, then reports a clear pass/fail result with actionable fixes. No files are created or modified."
 tags: ["validation", "knowledge", "standards", "repo-health"]
 applies-to: ["agent-skills repo"]
 author: "William Theo (IT RDI IM TD)"
@@ -30,7 +30,7 @@ type folder, mismatch the `type` field to its folder, use the wrong filename
 casing, or omit required front-matter fields — all of which break the agent's
 ability to discover and cross-link the knowledge correctly.
 
-This skill compares the contributor's branch against remote master, finds every
+This skill compares the contributor's branch against the base branch, finds every
 newly added `knowledge/` file, and checks each one against the taxonomy and
 front-matter rules. The result is a clear, line-by-line report of what passed,
 what failed, and exactly what to change — with no automated modifications made.
@@ -39,12 +39,30 @@ what failed, and exactly what to change — with no automated modifications made
 
 ## Instructions
 
-### Step 1 — Sync with Remote Master
+### Step 1 — Resolve the Base Branch and Sync
 
-Fetch the latest state of the remote master branch without modifying the working tree:
+Determine the branch to compare against — there is **no hardcoded `master`/`main`**.
+Resolve the base branch in this order:
+
+1. **Tracked dedicated branch** — if `<workspace>/.aiws/config.toml` sets
+   `upstream_ref`, use that branch.
+2. **Repository default branch** — otherwise detect it from the remote.
+3. **Fallback** — if neither resolves, ask the user for the base branch name.
 
 ```bash
-git fetch origin master
+# 1) Prefer the dedicated branch tracked by `aiws init`
+BASE="$(sed -n 's/^upstream_ref[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' .aiws/config.toml 2>/dev/null)"
+# 2) Fall back to the remote's default branch
+[ -z "$BASE" ] && BASE="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##')"
+[ -z "$BASE" ] && BASE="$(git remote show origin 2>/dev/null | sed -n 's/.*HEAD branch: //p')"
+echo "Base branch: ${BASE:-<unset>}"
+```
+
+If `BASE` is still empty, ask the user for the correct base branch before continuing.
+Then fetch it without modifying the working tree:
+
+```bash
+git fetch origin "$BASE"
 ```
 
 > If `git fetch` fails (e.g., no network, wrong remote name), report the error
@@ -55,11 +73,11 @@ git fetch origin master
 
 ### Step 2 — Identify Newly Added Knowledge Files
 
-Compare the current local branch against `origin/master` and collect **only new
+Compare the current local branch against `origin/$BASE` and collect **only new
 files under `knowledge/`** (status `A` = Added):
 
 ```bash
-git diff --name-status origin/master...HEAD --diff-filter=A -- knowledge/
+git diff --name-status origin/$BASE...HEAD --diff-filter=A -- knowledge/
 ```
 
 Parse the output: each line is `A\t<relative-file-path>`.
@@ -74,7 +92,7 @@ git rev-parse --abbrev-ref HEAD
 If the list is **empty**, report:
 
 ```
-✅ No new knowledge files detected between this branch and origin/master. Nothing to validate.
+✅ No new knowledge files detected between this branch and origin/$BASE. Nothing to validate.
 ```
 
 and stop.
@@ -178,9 +196,9 @@ After validating all new files, produce a report using this exact format:
 ````markdown
 ## Knowledge Validation Report
 
-### Branch vs. Master Comparison
+### Branch vs. Base Comparison
 - **Current branch:** `<branch-name>`
-- **Compared against:** `origin/master`
+- **Compared against:** `origin/$BASE`
 - **New knowledge files detected:** <count>
 
 ---
@@ -231,9 +249,9 @@ After validating all new files, produce a report using this exact format:
 ````markdown
 ## Knowledge Validation Report
 
-### Branch vs. Master Comparison
+### Branch vs. Base Comparison
 - **Current branch:** `<branch-name>`
-- **Compared against:** `origin/master`
+- **Compared against:** `origin/$BASE`
 - **New knowledge files detected:** <count>
 
 ### Result

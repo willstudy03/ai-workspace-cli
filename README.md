@@ -3,7 +3,9 @@ A portable, tool-agnostic **AI agent workspace** — one repository that gives
 **Claude Code**, **GitHub Copilot**, and **OpenAI Codex** the same governance rules,
 the same set of built-in **skills**, and the same curated **knowledge** structure.
 Clone it, open it in your AI coding tool of choice, and that tool automatically loads
-its instruction file plus the ten built-in `aiws-*` skills.
+its instruction file plus the ten built-in `aiws-*` skills. Or run the **`aiws` CLI**
+(`aiws init`) to bootstrap the same setup into any project — see
+[The `aiws` CLI](#the-aiws-cli--bootstrap-into-any-project).
 ---
 ## What is this?
 `ai-workspace` is the single source of truth for **how AI coding agents behave, what
@@ -99,12 +101,49 @@ An `agents/<role>/AGENT.md` persona defining goals, constraints, and the skills 
 Global installs land in `~/.claude/`, `~/.copilot/`, or `~/.codex/`; project installs
 land in a project's `.claude/`, `.github/`, or `.codex/`.
 ---
+## The `aiws` CLI — bootstrap into any project
+Instead of copying files by hand, the [`cli/`](./cli/) folder ships an **`aiws`**
+command that drops the right instruction file + all ten built-in `aiws-*` skills into
+any project and (optionally) launches your AI tool to finish setup.
+### Install
+```bash
+cd cli
+python install.py        # auto-detects uv, falls back to pip
+```
+### Use
+Run it inside the project you want to set up:
+```bash
+aiws init
+```
+`aiws init` walks you through an interactive wizard that:
+1. **Preflight** — checks Python (3.11+) and a package manager, then installs
+   **git** and **MarkItDown** (`markitdown[all]`, used by `aiws-raw-to-markdown`).
+2. **Picks your AI tool** — Claude Code, GitHub Copilot, or OpenAI Codex (offers to
+   `npm install` the tool's CLI if it's missing).
+3. **Tracks the skill market** *(optional)* — records an upstream repo + branch in
+   `.aiws/config.toml` so `aiws-install-skill` can pull built-in skill updates later.
+   There is **no default upstream** — leave it blank to skip.
+4. **Places the built-in skills** for the chosen tool:
+   | Tool | Instruction file | Skills folder |
+   |---|---|---|
+   | Claude Code | `CLAUDE.md` | `.claude/skills/` |
+   | GitHub Copilot | `.github/copilot-instructions.md` | `.github/skills/` |
+   | OpenAI Codex | `AGENTS.md` | `.codex/skills/` |
+5. **Launches the agent** to run `aiws-workspace-init` and scaffold the full
+   workspace tree. Add `--auto` to run it **headless** (auto-approved) end-to-end.
+The built-in skills are **bundled inside the package**, so `aiws init` works fully
+offline in any project — no checkout or network needed. See [`cli/README.md`](./cli/README.md)
+for all flags (`--tool`, `--path`, `--upstream`, `--auto`, `--no-launch`, `-y`, …).
+---
 ## Repository Structure
 ```
 ai-workspace/
 ├── README.md                       ← You are here
 ├── CLAUDE.md                       ← Claude Code instructions (Golden Rule + skill catalog)
 ├── AGENTS.md                       ← OpenAI Codex instructions
+├── cli/                            ← The `aiws` bootstrapper CLI (aiws init)
+│   ├── install.py                  ← Installer (uv/pip)
+│   └── src/aiws_cli/               ← CLI package + bundled built-in assets
 ├── .github/
 │   ├── copilot-instructions.md     ← GitHub Copilot instructions
 │   └── skills/                     ← 10 built-in aiws-* skills
@@ -139,6 +178,7 @@ ai-workspace/
 | Knowledge entry `type` | must match its folder | `concept` ↔ `knowledge/concepts/` |
 ---
 ## Further Reading
+- [`cli/README.md`](./cli/README.md) — the `aiws` bootstrapper CLI (`aiws init`)
 - [`CLAUDE.md`](./CLAUDE.md) — Claude Code guidance
 - [`AGENTS.md`](./AGENTS.md) — OpenAI Codex guidance
 - [`.github/copilot-instructions.md`](./.github/copilot-instructions.md) — GitHub Copilot guidance
