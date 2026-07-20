@@ -13,6 +13,7 @@ import subprocess
 import sys
 
 from .console import err, info, ok, warn
+from .proc import run_cli
 
 MIN_PYTHON = (3, 11)
 
@@ -83,12 +84,15 @@ def ensure_markitdown(manager: str | None, *, auto_install: bool) -> bool:
         return False
 
     info("Installing MarkItDown (markitdown[all]) ...")
-    if manager == "uv":
-        cmd = ["uv", "tool", "install", "markitdown[all]"]
-    else:
-        cmd = [sys.executable, "-m", "pip", "install", "markitdown[all]"]
-
-    result = subprocess.run(cmd)
+    try:
+        if manager == "uv":
+            result = run_cli(["uv", "tool", "install", "markitdown[all]"])
+        else:
+            result = subprocess.run([sys.executable, "-m", "pip", "install", "markitdown[all]"])
+    except OSError as exc:
+        warn(f"MarkItDown install could not start ({exc}).")
+        info(r"Install manually with: pip install 'markitdown\[all]'")
+        return False
     if result.returncode == 0 and shutil.which("markitdown"):
         ok("MarkItDown installed")
         return True
@@ -145,7 +149,7 @@ def _install_git() -> bool:
     try:
         if system == "Windows":
             if shutil.which("winget"):
-                return subprocess.run(
+                return run_cli(
                     [
                         "winget", "install", "--id", "Git.Git", "-e",
                         "--source", "winget",
@@ -153,26 +157,26 @@ def _install_git() -> bool:
                     ]
                 ).returncode == 0
             if shutil.which("choco"):
-                return subprocess.run(["choco", "install", "git", "-y"]).returncode == 0
+                return run_cli(["choco", "install", "git", "-y"]).returncode == 0
             warn("No winget/choco found to install git automatically.")
             return False
         if system == "Darwin":
             if shutil.which("brew"):
-                return subprocess.run(["brew", "install", "git"]).returncode == 0
+                return run_cli(["brew", "install", "git"]).returncode == 0
             info("Trigger the Xcode command line tools: xcode-select --install")
-            return subprocess.run(["xcode-select", "--install"]).returncode == 0
+            return run_cli(["xcode-select", "--install"]).returncode == 0
         # Linux / other
         if shutil.which("apt-get"):
-            subprocess.run(["sudo", "apt-get", "update"])
-            return subprocess.run(["sudo", "apt-get", "install", "-y", "git"]).returncode == 0
+            run_cli(["sudo", "apt-get", "update"])
+            return run_cli(["sudo", "apt-get", "install", "-y", "git"]).returncode == 0
         if shutil.which("dnf"):
-            return subprocess.run(["sudo", "dnf", "install", "-y", "git"]).returncode == 0
+            return run_cli(["sudo", "dnf", "install", "-y", "git"]).returncode == 0
         if shutil.which("yum"):
-            return subprocess.run(["sudo", "yum", "install", "-y", "git"]).returncode == 0
+            return run_cli(["sudo", "yum", "install", "-y", "git"]).returncode == 0
         if shutil.which("pacman"):
-            return subprocess.run(["sudo", "pacman", "-S", "--noconfirm", "git"]).returncode == 0
+            return run_cli(["sudo", "pacman", "-S", "--noconfirm", "git"]).returncode == 0
         if shutil.which("zypper"):
-            return subprocess.run(["sudo", "zypper", "install", "-y", "git"]).returncode == 0
+            return run_cli(["sudo", "zypper", "install", "-y", "git"]).returncode == 0
         warn("No supported package manager found to install git automatically.")
         return False
     except Exception as exc:  # pragma: no cover - platform dependent

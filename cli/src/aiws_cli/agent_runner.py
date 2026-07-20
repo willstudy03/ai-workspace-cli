@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import shutil
-import subprocess
 
 from .console import console, info, ok, warn
+from .proc import run_cli
 from .tools import AiTool
 
 INIT_PROMPT = (
@@ -40,7 +40,7 @@ def launch_agent(tool: AiTool, *, prompt: str | None = None, headless: bool = Fa
     console.print(f"  [dim]It will be asked to run:[/dim] {prompt}")
     console.print()
     try:
-        subprocess.run(argv)
+        run_cli(argv)
     except KeyboardInterrupt:
         warn(f"{tool.display_name} session interrupted.")
         return True

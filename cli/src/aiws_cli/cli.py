@@ -7,7 +7,6 @@ Commands:
 from __future__ import annotations
 
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -21,6 +20,7 @@ from .assets import AssetError, build_copy_plan, place_assets, resolve_asset_sou
 from .config import AiwsConfig, save_config
 from .console import console, err_console, info, ok, step, warn
 from .deps import run_preflight
+from .proc import run_cli
 from .tools import TOOL_ORDER, TOOLS, AiTool, get_tool
 
 # Upstream repo used when "track the skill market" is enabled and no local checkout
@@ -222,11 +222,8 @@ def _ensure_tool_cli(tool: AiTool, assume_yes: bool) -> None:
         return
 
     info(f"Running: {tool.install_hint}")
-    # Resolve the launcher (e.g. npm.cmd on Windows) so subprocess can find it.
-    argv = tool.install_hint.split()
-    argv[0] = npm
     try:
-        result = subprocess.run(argv)
+        result = run_cli(tool.install_hint.split())
     except OSError as exc:
         warn(f"Could not run the installer ({exc}). Install manually: {tool.install_hint}")
         return
