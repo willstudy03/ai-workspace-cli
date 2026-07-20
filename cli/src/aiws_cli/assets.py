@@ -142,13 +142,25 @@ def _clone_or_update_cache(upstream_repo: str, ref: str) -> Path:
 # ── Copy planning & execution ─────────────────────────────────────────────────
 
 
-def build_copy_plan(source: AssetSource, tool: AiTool, target: Path) -> CopyPlan:
+def _tool_paths(source: AssetSource, tool: AiTool) -> tuple[Path, Path]:
+    """Return (instruction_src, skills_src) for a tool within a given source."""
     if source.kind == "bundle":
-        inst_src = source.base / tool.key / tool.instruction_filename
-        skills_src = source.base / tool.key / "skills"
-    else:
-        inst_src = source.base / tool.instruction_src
-        skills_src = source.base / tool.skills_src
+        return (
+            source.base / tool.key / tool.instruction_filename,
+            source.base / tool.key / "skills",
+        )
+    return source.base / tool.instruction_src, source.base / tool.skills_src
+
+
+def build_copy_plan(source: AssetSource, tool: AiTool, target: Path) -> CopyPlan:
+    inst_src, skills_src = _tool_paths(source, tool)
+
+    # If a repo source is missing this tool's assets (e.g. its .claude/ folder was
+    # deleted), fall back to the packaged bundle so init still works.
+    if not (inst_src.exists() and skills_src.is_dir()) and source.kind != "bundle" and _bundle_available():
+        warn(f"Source is missing assets for {tool.display_name}; using the bundled copy.")
+        inst_src, skills_src = _tool_paths(AssetSource("bundle", BUNDLE_DIR), tool)
+
     if not inst_src.exists():
         raise AssetError(f"Instruction file missing in source: {inst_src}")
     if not skills_src.is_dir():
