@@ -229,7 +229,7 @@ Then produce a summary:
 ✅ Workspace Initialized
 ─────────────────────────────────────────────
 Target : ~/.claude/
-Created: 16 file(s)   Skipped: 1 (already existed)
+Created: 20 file(s)   Skipped: 1 (already existed)
 
 Next steps:
   • Copy skills/example-skill/ as a starting point for your own skill.
@@ -674,7 +674,7 @@ exit 0
 2. Detect existing structure (all missing)
 3. Show plan → user confirms **YES**
 4. Create all folders + seed every `example-*` file
-5. Verify with `find` → report ✅ (16 files created)
+5. Verify with `find` → report ✅ (20 files created)
 
 ---
 

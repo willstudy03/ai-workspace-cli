@@ -157,7 +157,11 @@ def build_copy_plan(source: AssetSource, tool: AiTool, target: Path) -> CopyPlan
 
     # If a repo source is missing this tool's assets (e.g. its .claude/ folder was
     # deleted), fall back to the packaged bundle so init still works.
-    if not (inst_src.exists() and skills_src.is_dir()) and source.kind != "bundle" and _bundle_available():
+    if (
+        not (inst_src.exists() and skills_src.is_dir())
+        and source.kind != "bundle"
+        and _bundle_available()
+    ):
         warn(f"Source is missing assets for {tool.display_name}; using the bundled copy.")
         inst_src, skills_src = _tool_paths(AssetSource("bundle", BUNDLE_DIR), tool)
 

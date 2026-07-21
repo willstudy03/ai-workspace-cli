@@ -1,6 +1,6 @@
 [project]
 name = "aiws-cli"
-version = "0.1.0"
+version = "0.3.0"
 description = "aiws — bootstrap an AI-agent workspace (skills + knowledge) for Claude Code, GitHub Copilot, or OpenAI Codex"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -45,6 +45,10 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# scaffold.py embeds long Markdown template literals (document content).
+"src/aiws_cli/scaffold.py" = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

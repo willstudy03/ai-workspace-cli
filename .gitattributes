@@ -1,0 +1,5 @@
+# Normalize line endings in the repository to LF so generated content — notably the
+# packaged bundle under cli/src/aiws_cli/bundle/ produced by sync_bundle.sh — is
+# byte-stable across Windows/macOS/Linux (keeps the CI bundle-drift check reliable).
+* text=auto
+

@@ -228,6 +228,21 @@ aiws ingest --tool claude -y      # preselect tool, accept defaults
 > deterministic. The chained `aiws-validate-knowledge` step is the automated quality
 > gate. Ingestion is additive; source files are moved to `source/processed/` (never deleted).
 
+## Development
+
+Run the test suite and linter from the `cli/` directory:
+
+```bash
+pip install pytest ruff          # or: uv sync
+python -m pytest -q               # unit tests (tests/)
+ruff check src tests             # lint
+```
+
+CI (`.gitlab-ci.yml`) runs lint + tests, a **bundle-drift check** (fails if the
+committed bundle is out of sync with the canonical skills — run
+`bash cli/scripts/sync_bundle.sh` and commit), and `release.sh` to build and verify
+the wheel. Tagging `vX.Y.Z` enables a manual publish job.
+
 ## Releasing / Publishing to PyPI
 
 End users install `aiws` from PyPI (`pip install aiws-cli`). The published **wheel

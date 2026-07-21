@@ -64,7 +64,8 @@ def cli() -> None:
 @click.option("--launch/--no-launch", "do_launch", default=None,
               help="Launch the AI tool to run aiws-workspace-init when done.")
 @click.option("--auto", is_flag=True,
-              help="Launch the AI tool headless (auto-approved) and run the init skill to completion.")
+              help="Launch the AI tool headless (auto-approved) and run the init skill "
+                   "to completion.")
 @click.option("--scaffold/--no-scaffold", "scaffold", default=None,
               help="Create the full workspace folder tree directly in Python "
                    "(no agent, no per-action permission prompts).")
@@ -299,8 +300,11 @@ def ingest(
     # ── Plan + confirm ────────────────────────────────────────────────────────
     step("Plan", "knowledge ingestion")
     console.print(f"      Tool     : [bold]{tool.display_name}[/bold]")
-    console.print(f"      Source   : {tool.workspace_root}/knowledge/source/raw/  [dim]({len(raw_files)} file(s))[/dim]")
-    console.print(f"      Pipeline : aiws-raw-to-markdown → aiws-create-knowledge"
+    console.print(
+        f"      Source   : {tool.workspace_root}/knowledge/source/raw/  "
+        f"[dim]({len(raw_files)} file(s))[/dim]"
+    )
+    console.print("      Pipeline : aiws-raw-to-markdown → aiws-create-knowledge"
                   + (" → aiws-validate-knowledge" if do_validate else ""))
     console.print(f"      Mode     : {'headless (--auto)' if auto else 'interactive'}")
     console.print()
@@ -488,7 +492,8 @@ def _print_summary(tool: AiTool, target: Path, track_market: bool, *, scaffolded
         f"  Tool     : [bold]{tool.display_name}[/bold]",
         f"  Target   : {target}",
         f"  Skills   : {tool.skills_dest}/  [dim](10 built-in aiws-* skills)[/dim]",
-        f"  Config   : .aiws/config.toml  [dim](track_market={'on' if track_market else 'off'})[/dim]",
+        f"  Config   : .aiws/config.toml  "
+        f"[dim](track_market={'on' if track_market else 'off'})[/dim]",
     ]
     if scaffolded:
         lines.append(

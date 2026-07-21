@@ -1,0 +1,81 @@
+# GitLab CI for the aiws CLI (cli/).
+# Stages: lint -> test (unit + bundle-drift) -> build (+ optional manual publish).
+
+default:
+  image: python:3.12-slim
+
+stages:
+  - lint
+  - test
+  - build
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.pip-cache"
+
+cache:
+  paths:
+    - .pip-cache/
+
+.py: &py
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+
+lint:
+  <<: *py
+  stage: lint
+  script:
+    - pip install ruff
+    - ruff check cli/src cli/tests
+
+unit-tests:
+  <<: *py
+  stage: test
+  script:
+    - pip install pytest
+    # conftest.py puts cli/src on sys.path, so no install is required.
+    - cd cli && python -m pytest -q
+
+bundle-drift:
+  stage: test
+  image: python:3.12
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq git
+  script:
+    # Regenerate the offline bundle from the canonical .github/.claude/.codex folders
+    # and fail if the committed bundle is out of date.
+    - bash cli/scripts/sync_bundle.sh
+    - |
+      if ! git diff --quiet -- cli/src/aiws_cli/bundle; then
+        echo "ERROR: bundle is stale. Run 'bash cli/scripts/sync_bundle.sh' and commit."
+        git --no-pager diff --stat -- cli/src/aiws_cli/bundle
+        exit 1
+      fi
+      echo "Bundle is in sync."
+
+build:
+  <<: *py
+  stage: build
+  script:
+    - pip install build twine
+    - bash cli/scripts/release.sh          # build wheel+sdist, verify bundle is inside
+  artifacts:
+    paths:
+      - cli/dist/*
+    expire_in: 1 week
+
+# Publish to PyPI on a version tag (set TWINE_USERNAME=__token__ and TWINE_PASSWORD
+# as protected CI variables). Manual to avoid accidental releases.
+publish:
+  <<: *py
+  stage: build
+  script:
+    - pip install build twine
+    - bash cli/scripts/release.sh --publish
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/'
+      when: manual
+  artifacts:
+    paths:
+      - cli/dist/*
+

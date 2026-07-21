@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import tomllib
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 CONFIG_DIRNAME = ".aiws"
@@ -25,7 +25,7 @@ class AiwsConfig:
     initialized_at: str | None = None
 
     def stamp_now(self) -> None:
-        self.initialized_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        self.initialized_at = datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def config_path(workspace: Path) -> Path:
