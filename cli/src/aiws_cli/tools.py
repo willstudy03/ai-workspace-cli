@@ -50,7 +50,10 @@ class AiTool:
     def launch_argv(self, prompt: str) -> list[str]:
         """Return the argv used to open the tool interactively with a starting prompt."""
         if self.key == "copilot":
-            return [self.cli_command, "-p", prompt]
+            # `-i/--interactive` starts an interactive session AND runs the prompt, so
+            # Copilot can request tool/file permissions from the user (unlike `-p`,
+            # which is non-interactive and denies tools without --allow-all-tools).
+            return [self.cli_command, "-i", prompt]
         # claude and codex both accept a positional prompt argument.
         return [self.cli_command, prompt]
 
@@ -67,8 +70,9 @@ class AiTool:
         if self.key == "codex":
             # Non-interactive exec subcommand with workspace-write auto approvals.
             return [self.cli_command, "exec", "--full-auto", prompt]
-        # copilot: programmatic prompt mode, pre-approve tool use.
-        return [self.cli_command, "-p", prompt, "--allow-all-tools"]
+        # copilot: non-interactive requires pre-approving BOTH tools and file paths,
+        # otherwise scaffolding writes fail with "could not request permission".
+        return [self.cli_command, "-p", prompt, "--allow-all-tools", "--allow-all-paths"]
 
 
 TOOLS: dict[str, AiTool] = {
@@ -98,10 +102,11 @@ TOOLS: dict[str, AiTool] = {
         instruction_dest=".github/copilot-instructions.md",
         skills_src=".github/skills",
         skills_dest=".github/skills",
-        auth_env_vars=("GH_TOKEN", "GITHUB_TOKEN"),
+        auth_env_vars=("COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"),
         login_hint=(
             "In the Copilot session, run /login to authenticate with your GitHub "
-            "account, then run /exit (or press Ctrl-D) to return to aiws."
+            "account, then run /exit (or press Ctrl-D) to return to aiws. "
+            "(Alternatively: run `gh auth login`, or set GH_TOKEN / GITHUB_TOKEN.)"
         ),
     ),
     "codex": AiTool(

@@ -92,13 +92,11 @@ def init(
     console.print("  [bold]Preflight[/bold]  installing dependencies")
     run_preflight(install_markitdown=install_markitdown, install_git=install_git)
 
-    tool_cli_just_installed = False
     try:
         # ── 2. Choose the AI tool ─────────────────────────────────────────────
         tool = _select_tool(tool_key, assume_yes)
-        tool_cli_just_installed = False
         if check_tool_cli:
-            tool_cli_just_installed = _ensure_tool_cli(tool, assume_yes)
+            _ensure_tool_cli(tool, assume_yes)
         else:
             info("Skipping AI tool CLI check (--no-tool-cli); no npm/Node required.")
 
@@ -169,9 +167,11 @@ def init(
             console=console,
         )
     if do_launch:
-        # A freshly installed CLI (or a headless run that can't sign in mid-flight)
-        # needs authentication first. Gate the launch on completing sign-in.
-        if check_tool_cli and (tool_cli_just_installed or auto):
+        # Ensure the tool is authenticated before launching — an unauthenticated
+        # CLI (e.g. `copilot -p`) errors out with "No authentication information
+        # found" instead of running the init skill. Fires for every launch; a
+        # confirmed sign-in (token/gh) short-circuits without prompting.
+        if check_tool_cli:
             if not ensure_authenticated(tool, assume_yes=assume_yes):
                 console.print("  [yellow]Launch skipped until authentication is complete.[/yellow]")
                 do_launch = False

@@ -32,7 +32,11 @@ cd cli
 python install.py        # auto-detects uv, falls back to pip
 ```
 
-`install.py` installs the `aiws` command and verifies it is on your PATH.
+`install.py` installs the `aiws` command, **configures your PATH automatically** if
+the command isn't already discoverable (via `uv tool update-shell`, or by adding the
+executable directory to your user PATH on Windows / your shell rc on macOS/Linux),
+and verifies it works. If PATH was just updated, open a **new terminal** so the
+change takes effect.
 
 ## `aiws init`
 
@@ -71,24 +75,29 @@ What it does, in order:
    default this is an interactive launch; pass `--auto` to run it **headless with
    auto-approval** so the skill completes end-to-end without prompts:
 
-   | Tool           | Interactive launch      | `--auto` (headless)                                   |
-   |----------------|-------------------------|-------------------------------------------------------|
-   | Claude Code    | `claude "<prompt>"`     | `claude -p "<prompt>" --permission-mode acceptEdits`  |
-   | GitHub Copilot | `copilot -p "<prompt>"` | `copilot -p "<prompt>" --allow-all-tools`             |
-   | OpenAI Codex   | `codex "<prompt>"`      | `codex exec --full-auto "<prompt>"`                   |
+   | Tool           | Interactive launch      | `--auto` (headless)                                        |
+   |----------------|-------------------------|------------------------------------------------------------|
+   | Claude Code    | `claude "<prompt>"`     | `claude -p "<prompt>" --permission-mode acceptEdits`       |
+   | GitHub Copilot | `copilot -i "<prompt>"` | `copilot -p "<prompt>" --allow-all-tools --allow-all-paths`|
+   | OpenAI Codex   | `codex "<prompt>"`      | `codex exec --full-auto "<prompt>"`                        |
 
-   **First-time sign-in:** if `aiws` just installed the tool's CLI (or you run
-   `--auto`), you likely aren't authenticated yet. Before launching the init prompt,
-   `aiws` runs an **authentication gate**: if no auth token is detected
-   (`ANTHROPIC_API_KEY` / `GH_TOKEN` / `GITHUB_TOKEN` / `OPENAI_API_KEY`), it opens
-   the tool's sign-in flow and waits for you to complete login, then continues to run
-   `aiws-workspace-init`.
+   **First-time sign-in:** launching an unauthenticated CLI fails — e.g.
+   `copilot -p` prints *"No authentication information found"* and exits instead of
+   running the skill. So before launching, `aiws` runs an **authentication gate**:
+   it checks whether you're signed in (an auth token env var
+   `COPILOT_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN` / `ANTHROPIC_API_KEY` /
+   `OPENAI_API_KEY`, or a working `gh auth status` for Copilot). If sign-in can't be
+   confirmed, it opens the tool's login flow, waits for you to finish, then continues
+   to run `aiws-workspace-init`.
 
    | Tool           | Sign-in step                                                            |
    |----------------|-------------------------------------------------------------------------|
    | Claude Code    | opens `claude`; complete the browser OAuth, then `/exit` to continue    |
-   | GitHub Copilot | opens `copilot`; run `/login`, then `/exit` to continue                 |
+   | GitHub Copilot | opens `copilot`; run `/login` (or `gh auth login`), then `/exit`        |
    | OpenAI Codex   | runs `codex login` (ChatGPT account or API key)                         |
+
+   In non-interactive mode (`-y`) the gate can't drive a login, so it warns and
+   proceeds; authenticate first (or set a token env var) for unattended runs.
 
 Your choices are saved to `<workspace>/.aiws/config.toml`.
 

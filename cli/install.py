@@ -124,6 +124,114 @@ def verify_install() -> bool:
     return subprocess.run(["aiws", "--version"], capture_output=True, text=True).returncode == 0
 
 
+# ── PATH setup ────────────────────────────────────────────────────────────────
+
+
+def _candidate_bin_dirs(installer: str) -> list[Path]:
+    """Directories where the ``aiws`` executable may have been installed."""
+    import sysconfig
+
+    dirs: list[Path] = []
+    if installer == "uv" and shutil.which("uv"):
+        # Newer uv exposes the executable dir directly.
+        r = subprocess.run(["uv", "tool", "dir", "--bin"], capture_output=True, text=True)
+        if r.returncode == 0 and r.stdout.strip():
+            dirs.append(Path(r.stdout.strip()))
+    # pip user/base scripts dirs across schemes.
+    schemes = {sysconfig.get_default_scheme(), "nt_user", "posix_user", "nt", "posix_prefix"}
+    for scheme in schemes:
+        try:
+            p = sysconfig.get_path("scripts", scheme)
+            if p:
+                dirs.append(Path(p))
+        except Exception:
+            pass
+    # Common fallbacks.
+    dirs.append(Path.home() / ".local" / "bin")
+    if os.name == "nt":
+        dirs.append(Path.home() / ".local" / "bin")
+
+    seen: set[str] = set()
+    unique: list[Path] = []
+    for d in dirs:
+        key = str(d)
+        if d and key not in seen:
+            seen.add(key)
+            unique.append(d)
+    return unique
+
+
+def _find_aiws_bin(installer: str) -> Path | None:
+    """Return the directory that actually contains the installed aiws executable."""
+    for d in _candidate_bin_dirs(installer):
+        for name in ("aiws", "aiws.exe", "aiws.cmd"):
+            if (d / name).exists():
+                return d
+    return None
+
+
+def _persist_path_windows(bin_dir: Path) -> bool:
+    """Append bin_dir to the *user* PATH persistently via PowerShell."""
+    target = str(bin_dir)
+    ps = (
+        "$d=[Environment]::GetEnvironmentVariable('Path','User');"
+        "if($null -eq $d){$d=''};"
+        "if(-not (($d -split ';') -contains $env:AIWS_BIN)){"
+        "$nd=($d.TrimEnd(';') + ';' + $env:AIWS_BIN).TrimStart(';');"
+        "[Environment]::SetEnvironmentVariable('Path',$nd,'User')}"
+    )
+    env = {**os.environ, "AIWS_BIN": target}
+    r = subprocess.run(
+        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps],
+        env=env,
+    )
+    return r.returncode == 0
+
+
+def _persist_path_posix(bin_dir: Path) -> bool:
+    """Append an export line for bin_dir to the user's shell rc files."""
+    line = f'\n# Added by aiws installer\nexport PATH="$PATH:{bin_dir}"\n'
+    changed = False
+    candidates = [Path.home() / ".profile"]
+    shell = os.environ.get("SHELL", "")
+    if "zsh" in shell:
+        candidates.append(Path.home() / ".zshrc")
+    else:
+        candidates.append(Path.home() / ".bashrc")
+    for rc in candidates:
+        try:
+            existing = rc.read_text(encoding="utf-8") if rc.exists() else ""
+            if str(bin_dir) not in existing:
+                with open(rc, "a", encoding="utf-8") as f:
+                    f.write(line)
+                changed = True
+        except Exception:
+            pass
+    return changed
+
+
+def ensure_on_path(installer: str) -> bool:
+    """Make ``aiws`` runnable now and in future shells. Returns True if usable now."""
+    # Preferred path for uv: it configures the shell for us.
+    if installer == "uv" and shutil.which("uv"):
+        info("Configuring your shell PATH: uv tool update-shell")
+        subprocess.run(["uv", "tool", "update-shell"])
+
+    bin_dir = _find_aiws_bin(installer)
+    if bin_dir is None:
+        warn("Could not locate the installed aiws executable to configure PATH.")
+        return verify_install()
+
+    # Persist to future shells.
+    persisted = _persist_path_windows(bin_dir) if os.name == "nt" else _persist_path_posix(bin_dir)
+    if persisted:
+        ok(f"Added to PATH (new shells): {bin_dir}")
+
+    # Make it work in *this* process so we can verify immediately.
+    os.environ["PATH"] = str(bin_dir) + os.pathsep + os.environ.get("PATH", "")
+    return verify_install()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Install the aiws CLI")
     parser.add_argument("--pip", action="store_true", help="Force pip install")
@@ -149,16 +257,36 @@ def main() -> None:
     print()
     if verify_install():
         ok(bold("aiws is on PATH and working"))
-        print()
-        info("Next: bootstrap a workspace in your project:")
-        print(f"    {bold('aiws init')}")
-        print()
-    else:
-        warn("aiws was installed but not found on PATH.")
-        if os.name == "nt" and installer == "uv":
-            warn("Add the uv tools dir to PATH:  uv tool dir")
-        info("After updating PATH, run:  aiws init")
-        sys.exit(1)
+        _print_next_steps()
+        return
+
+    # Not on PATH yet — actively configure it.
+    warn("aiws was installed but not yet on PATH — configuring it now ...")
+    if ensure_on_path(installer):
+        ok(bold("aiws is installed and configured"))
+        warn("Open a NEW terminal (or restart your shell) so PATH takes effect.")
+        _print_next_steps()
+        return
+
+    # Still not usable — give precise manual guidance.
+    bin_dir = _find_aiws_bin(installer)
+    warn("aiws was installed but is still not on PATH.")
+    if bin_dir:
+        if os.name == "nt":
+            info(f"Add this folder to PATH, then restart your terminal:\n      {bin_dir}")
+        else:
+            info(f'Add to your shell rc:  export PATH="$PATH:{bin_dir}"')
+    elif installer == "uv":
+        info("Run:  uv tool update-shell   then restart your terminal.")
+    info("After updating PATH, run:  aiws init")
+    sys.exit(1)
+
+
+def _print_next_steps() -> None:
+    print()
+    info("Next: bootstrap a workspace in your project:")
+    print(f"    {bold('aiws init')}")
+    print()
 
 
 if __name__ == "__main__":

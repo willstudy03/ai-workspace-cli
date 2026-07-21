@@ -23,20 +23,40 @@ AUTO_INIT_PROMPT = (
 )
 
 
-def ensure_authenticated(tool: AiTool, *, assume_yes: bool, force: bool = False) -> bool:
+def _detect_auth(tool: AiTool) -> tuple[bool, str]:
+    """Best-effort check whether the tool is already authenticated.
+
+    Returns (True, how) if we can positively confirm sign-in, else (False, "").
+    We never return a false positive: an unconfirmed result is treated as "not
+    authenticated" so the user is guided to sign in.
+    """
+    env_var = next((v for v in tool.auth_env_vars if os.environ.get(v)), None)
+    if env_var:
+        return True, f"${env_var}"
+
+    # GitHub Copilot can also use the GitHub CLI's stored token.
+    if tool.key == "copilot" and shutil.which("gh"):
+        try:
+            r = run_cli(["gh", "auth", "status"], capture_output=True, text=True)
+            if r.returncode == 0:
+                return True, "gh auth"
+        except (OSError, FileNotFoundError):
+            pass
+    return False, ""
+
+
+def ensure_authenticated(tool: AiTool, *, assume_yes: bool) -> bool:
     """Make sure the tool is signed in before we hand it the init prompt.
 
-    A first-time user whose CLI aiws just installed is not authenticated yet, so
-    launching (especially headless) would fail. If no auth env var/token is
-    detected, we run the tool's interactive login flow and wait for the user to
-    complete sign-in, then continue.
+    Launching an unauthenticated CLI (e.g. ``copilot -p`` prints
+    "No authentication information found" and exits). If sign-in can't be
+    confirmed, we run the tool's login flow and wait for the user to complete it.
 
     Returns True if we should proceed to launch, False if the user aborted.
     """
-    # Already authenticated via an environment token — nothing to do.
-    env_var = next((v for v in tool.auth_env_vars if os.environ.get(v)), None)
-    if env_var and not force:
-        ok(f"{tool.display_name} appears authenticated (${env_var} is set).")
+    authed, how = _detect_auth(tool)
+    if authed:
+        ok(f"{tool.display_name} authentication detected ({how}).")
         return True
 
     if not shutil.which(tool.cli_command):
@@ -44,17 +64,21 @@ def ensure_authenticated(tool: AiTool, *, assume_yes: bool, force: bool = False)
         return True
 
     console.print()
-    console.print(f"  [bold]Authentication[/bold]  {tool.display_name} may require sign-in")
+    console.print(f"  [bold]Authentication[/bold]  {tool.display_name} needs you to be signed in")
     if tool.login_hint:
         info(tool.login_hint)
 
-    do_login = assume_yes or Confirm.ask(
-        f"    Open {tool.display_name} to sign in now?", default=True, console=console
+    # Non-interactive mode: we can't drive an interactive login, so warn and proceed.
+    if assume_yes:
+        warn("Non-interactive mode (-y): skipping sign-in.")
+        info(f"If the tool isn't authenticated, sign in and re-run: aiws init --tool {tool.key}")
+        return True
+
+    do_login = Confirm.ask(
+        f"    Sign in to {tool.display_name} now?", default=True, console=console
     )
     if not do_login:
-        warn("Skipping sign-in. If the tool isn't authenticated, the init step may fail.")
-        info(f"You can authenticate later and re-run: aiws init --tool {tool.key}")
-        # Let the caller decide whether to still attempt the launch.
+        warn("Continuing without sign-in — the tool may report an authentication error.")
         return True
 
     login_argv = tool.login_argv()
@@ -70,8 +94,10 @@ def ensure_authenticated(tool: AiTool, *, assume_yes: bool, force: bool = False)
         info(f"Authenticate manually, then re-run: aiws init --tool {tool.key}")
         return True
 
-    # Give the user a chance to confirm before we launch the init prompt.
-    if assume_yes:
+    # Re-check: if we can now confirm auth, say so; either way let the user continue.
+    authed, how = _detect_auth(tool)
+    if authed:
+        ok(f"{tool.display_name} authentication detected ({how}).")
         return True
     return Confirm.ask(
         f"    Finished signing in to {tool.display_name}? Continue to run aiws-workspace-init?",
