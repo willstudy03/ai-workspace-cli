@@ -15,11 +15,11 @@ from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
 
 from . import __version__
-from .agent_runner import ensure_authenticated, launch_agent
+from .agent_runner import build_ingest_prompt, ensure_authenticated, launch_agent
 from .assets import AssetError, build_copy_plan, place_assets, resolve_asset_source
-from .config import AiwsConfig, save_config
-from .console import console, err_console, info, ok, step, warn
-from .deps import ensure_node, run_preflight
+from .config import AiwsConfig, load_config, save_config
+from .console import console, err, err_console, info, ok, step, warn
+from .deps import detect_package_manager, ensure_markitdown, ensure_node, run_preflight
 from .proc import run_cli
 from .scaffold import scaffold_workspace
 from .tools import TOOL_ORDER, TOOLS, AiTool, get_tool
@@ -201,19 +201,132 @@ def init(
         launch_agent(tool, headless=auto)
 
 
+@cli.command()
+@click.option("--path", "target_str", default=".", help="Workspace directory (default: current).")
+@click.option(
+    "--tool",
+    "tool_key",
+    type=click.Choice(TOOL_ORDER, case_sensitive=False),
+    default=None,
+    help="AI tool to use (default: read from .aiws/config.toml, else prompt).",
+)
+@click.option("--auto", is_flag=True,
+              help="Run headless (auto-approved) end-to-end without confirmations.")
+@click.option("--validate/--no-validate", "do_validate", default=True,
+              help="Chain aiws-validate-knowledge after curation (default: on).")
+@click.option("--tool-cli/--no-tool-cli", "check_tool_cli", default=True,
+              help="Check for (and offer to install) the AI tool's CLI.")
+@click.option("--no-markitdown", "install_markitdown", flag_value=False, default=True,
+              help="Skip installing MarkItDown during preflight.")
+@click.option("-y", "--yes", "assume_yes", is_flag=True, help="Accept defaults; no prompts.")
+def ingest(
+    target_str: str,
+    tool_key: str | None,
+    auto: bool,
+    do_validate: bool,
+    check_tool_cli: bool,
+    install_markitdown: bool,
+    assume_yes: bool,
+) -> None:
+    """Run the knowledge-ingestion pipeline: raw-to-markdown -> create-knowledge.
+
+    Converts everything in ``knowledge/raw/`` to Markdown and curates it into proper
+    knowledge entries by launching your AI tool with a two-skill pipeline prompt
+    (optionally validating afterwards).
+    """
+    target = Path(target_str).expanduser().resolve()
+    _print_header(target, "ingest")
+
+    # ── Resolve the AI tool (flag > config > prompt) ──────────────────────────
+    tool = _resolve_tool_for_ingest(tool_key, target, assume_yes)
+
+    # ── Preflight: MarkItDown, raw content, required skills ───────────────────
+    console.print()
+    console.print("  [bold]Preflight[/bold]  checking ingestion prerequisites")
+    manager = detect_package_manager()
+    ensure_markitdown(manager, auto_install=install_markitdown)
+
+    raw_dir = target / tool.workspace_root / "knowledge" / "raw"
+    if not raw_dir.is_dir():
+        err(f"No knowledge/raw/ folder at {raw_dir}.")
+        info(f"Run 'aiws init --tool {tool.key}' first, then add files to ingest.")
+        sys.exit(1)
+
+    raw_files = [
+        p for p in raw_dir.iterdir() if p.is_file() and p.name.lower() != "readme.md"
+    ]
+    if not raw_files:
+        warn(f"Nothing to ingest — {raw_dir} has no files (besides README).")
+        info("Drop PDF/Word/PPT/Excel/Markdown/etc. into knowledge/raw/, then re-run.")
+        sys.exit(0)
+    ok(f"Found {len(raw_files)} file(s) to ingest in knowledge/raw/")
+
+    skills_dir = target / tool.skills_dest
+    missing = [
+        s for s in ("aiws-raw-to-markdown", "aiws-create-knowledge")
+        if not (skills_dir / s).is_dir()
+    ]
+    if do_validate and not (skills_dir / "aiws-validate-knowledge").is_dir():
+        missing.append("aiws-validate-knowledge")
+    if missing:
+        err(f"Required skill(s) not installed in {skills_dir}: {', '.join(missing)}")
+        info(f"Run 'aiws init --tool {tool.key}' to install the built-in skills first.")
+        sys.exit(1)
+
+    # ── Tool CLI + authentication ─────────────────────────────────────────────
+    if check_tool_cli:
+        _ensure_tool_cli(tool, assume_yes)
+
+    # ── Plan + confirm ────────────────────────────────────────────────────────
+    step("Plan", "knowledge ingestion")
+    console.print(f"      Tool     : [bold]{tool.display_name}[/bold]")
+    console.print(f"      Source   : {tool.workspace_root}/knowledge/raw/  [dim]({len(raw_files)} file(s))[/dim]")
+    console.print(f"      Pipeline : aiws-raw-to-markdown → aiws-create-knowledge"
+                  + (" → aiws-validate-knowledge" if do_validate else ""))
+    console.print(f"      Mode     : {'headless (--auto)' if auto else 'interactive'}")
+    console.print()
+    if not assume_yes and not Confirm.ask("    Proceed?", default=True, console=console):
+        console.print("  [yellow]Aborted.[/yellow]")
+        return
+
+    if check_tool_cli and not ensure_authenticated(tool, assume_yes=assume_yes):
+        console.print("  [yellow]Ingestion skipped until authentication is complete.[/yellow]")
+        return
+
+    # ── Launch the agent with the pipeline prompt ─────────────────────────────
+    console.print()
+    prompt = build_ingest_prompt(validate=do_validate, auto=auto)
+    launch_agent(tool, prompt=prompt, headless=auto)
+
+
 # ── Wizard helpers ────────────────────────────────────────────────────────────
 
 
-def _print_header(target: Path) -> None:
+def _print_header(target: Path, action: str = "init") -> None:
     console.print()
     console.print(
         Panel(
-            f"[bold]aiws[/bold] v{__version__}  ·  init\n[dim]{target}[/dim]",
+            f"[bold]aiws[/bold] v{__version__}  ·  {action}\n[dim]{target}[/dim]",
             expand=False,
             border_style="blue",
             padding=(0, 4),
         )
     )
+
+
+def _resolve_tool_for_ingest(tool_key: str | None, target: Path, assume_yes: bool) -> AiTool:
+    """Resolve the AI tool for ingest: --tool flag > .aiws/config.toml > prompt."""
+    if tool_key:
+        tool = get_tool(tool_key)
+        if tool:
+            return tool
+    cfg = load_config(target)
+    if cfg and cfg.tool:
+        tool = get_tool(cfg.tool)
+        if tool:
+            ok(f"Using tool from .aiws/config.toml: {tool.display_name}")
+            return tool
+    return _select_tool(None, assume_yes)
 
 
 def _select_tool(tool_key: str | None, assume_yes: bool) -> AiTool:

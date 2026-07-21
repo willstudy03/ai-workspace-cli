@@ -181,6 +181,42 @@ instruction files change (and before publishing a release):
 bash cli/scripts/sync_bundle.sh
 ```
 
+## `aiws ingest` — knowledge ingestion pipeline
+
+Once a workspace is set up, drop source files (PDF, Word, PowerPoint, Excel,
+Markdown, images, HTML, …) into `<root>/knowledge/raw/` and run:
+
+```bash
+aiws ingest
+```
+
+This launches your AI tool and runs the **knowledge ingestion pipeline** as a
+two-skill chain (optionally validating afterwards):
+
+1. **`aiws-raw-to-markdown`** — converts every non-Markdown file in `knowledge/raw/`
+   to Markdown (using MarkItDown).
+2. **`aiws-create-knowledge`** — curates each Markdown file into a standards-compliant
+   knowledge entry, one at a time, filed into the correct taxonomy folder.
+3. **`aiws-validate-knowledge`** *(unless `--no-validate`)* — validates the new
+   entries and reports pass/fail.
+
+Before launching, `aiws ingest` preflights: ensures **MarkItDown** is installed,
+confirms `knowledge/raw/` exists and has files to process, and checks the required
+skills are installed. The AI tool is resolved from `--tool`, else `.aiws/config.toml`,
+else a prompt.
+
+```bash
+aiws ingest                       # interactive: you approve each step
+aiws ingest --auto                # headless, hands-free, no confirmations
+aiws ingest --no-validate         # skip the validate-knowledge step
+aiws ingest --tool claude -y      # preselect tool, accept defaults
+```
+
+> Note: curation is performed by the AI agent (it classifies and rewrites each
+> file), so results depend on the model — unlike `--scaffold`, it isn't
+> deterministic. The chained `aiws-validate-knowledge` step is the automated quality
+> gate. Ingestion is additive; raw files are preserved.
+
 ## Releasing / Publishing to PyPI
 
 End users install `aiws` from PyPI (`pip install aiws-cli`). The published **wheel

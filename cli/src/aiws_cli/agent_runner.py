@@ -23,6 +23,31 @@ AUTO_INIT_PROMPT = (
 )
 
 
+def build_ingest_prompt(*, validate: bool, auto: bool) -> str:
+    """Prompt for the knowledge-ingestion pipeline (raw-to-markdown -> create-knowledge).
+
+    Optionally chains aiws-validate-knowledge, and (for ``auto``) adds explicit
+    "run without confirmation" phrasing.
+    """
+    steps = [
+        "Run the knowledge ingestion pipeline for this workspace.",
+        "1) Use the aiws-raw-to-markdown skill to convert EVERY non-Markdown file under "
+        "knowledge/raw/ into Markdown, written back into knowledge/raw/.",
+        "2) Then use the aiws-create-knowledge skill to curate each Markdown file in "
+        "knowledge/raw/ into a standards-compliant knowledge entry — process ONE FILE AT "
+        "A TIME and file each into the correct taxonomy folder (concepts, systems, "
+        "workflows, policies, how-to, references). Skip files that are already curated.",
+    ]
+    if validate:
+        steps.append(
+            "3) Then use the aiws-validate-knowledge skill to validate the new entries and "
+            "report pass/fail with any fixes."
+        )
+    if auto:
+        steps.append("Do all of this now, end to end, without asking for confirmation.")
+    return " ".join(steps)
+
+
 def _detect_auth(tool: AiTool) -> tuple[bool, str]:
     """Best-effort check whether the tool is already authenticated.
 
