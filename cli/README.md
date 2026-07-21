@@ -115,7 +115,7 @@ aiws init --scaffold        # create the structure directly, then stop (no launc
 This creates the full tree under the tool's workspace root (`.github/`, `.claude/`,
 or `.codex/`) and seeds every folder with a standards-compliant `example-*` file
 (agents, skills, references, knowledge/{concepts,systems,workflows,policies,how-to,
-references,raw}, codebases, docs, scripts). It's **additive and idempotent** —
+references, source/raw, source/processed}, codebases, docs, scripts). It's **additive and idempotent** —
 existing files are skipped (use `--overwrite` to replace). By default the wizard
 offers this; when scaffolding is done the agent launch is skipped (the structure
 already exists). The generated files match the `aiws-workspace-init` skill and pass
@@ -184,7 +184,7 @@ bash cli/scripts/sync_bundle.sh
 ## `aiws ingest` — knowledge ingestion pipeline
 
 Once a workspace is set up, drop source files (PDF, Word, PowerPoint, Excel,
-Markdown, images, HTML, …) into `<root>/knowledge/raw/` and run:
+Markdown, images, HTML, …) into `<root>/knowledge/source/raw/` and run:
 
 ```bash
 aiws ingest
@@ -193,15 +193,16 @@ aiws ingest
 This launches your AI tool and runs the **knowledge ingestion pipeline** as a
 two-skill chain (optionally validating afterwards):
 
-1. **`aiws-raw-to-markdown`** — converts every non-Markdown file in `knowledge/raw/`
+1. **`aiws-raw-to-markdown`** — converts every non-Markdown file in `knowledge/source/raw/`
    to Markdown (using MarkItDown).
 2. **`aiws-create-knowledge`** — curates each Markdown file into a standards-compliant
-   knowledge entry, one at a time, filed into the correct taxonomy folder.
+   knowledge entry, one at a time, filed into the correct taxonomy folder, then moves
+   the original source from `source/raw/` into `source/processed/`.
 3. **`aiws-validate-knowledge`** *(unless `--no-validate`)* — validates the new
    entries and reports pass/fail.
 
 Before launching, `aiws ingest` preflights: ensures **MarkItDown** is installed,
-confirms `knowledge/raw/` exists and has files to process, and checks the required
+confirms `knowledge/source/raw/` exists and has files to process, and checks the required
 skills are installed. The AI tool is resolved from `--tool`, else `.aiws/config.toml`,
 else a prompt.
 
@@ -215,7 +216,7 @@ aiws ingest --tool claude -y      # preselect tool, accept defaults
 > Note: curation is performed by the AI agent (it classifies and rewrites each
 > file), so results depend on the model — unlike `--scaffold`, it isn't
 > deterministic. The chained `aiws-validate-knowledge` step is the automated quality
-> gate. Ingestion is additive; raw files are preserved.
+> gate. Ingestion is additive; source files are moved to `source/processed/` (never deleted).
 
 ## Releasing / Publishing to PyPI
 

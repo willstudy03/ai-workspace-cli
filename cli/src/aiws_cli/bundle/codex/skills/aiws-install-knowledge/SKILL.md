@@ -48,7 +48,7 @@ Every knowledge entry lives in the folder that matches its `type`:
 | `knowledge/policies/` | Rules, requirements, and governance | `policy` |
 | `knowledge/how-to/` | Instructional, step-by-step task guidance | `how-to` |
 | `knowledge/references/` | Lookup material — cheatsheets, checklists, definitions | `reference` |
-| `knowledge/raw/` | Uncurated staging area (not authoritative) | — |
+| `knowledge/source/raw/` | Uncurated staging area (not authoritative) | — |
 
 > **Note:** `knowledge/references/` is the knowledge layer's own lookup material.
 > It is **not** the same as the repo-root `references/` folder (external specs cited
@@ -242,8 +242,8 @@ For every selected entry (`knowledge/<type-folder>/<entry>.md`):
 6. Deduplicate. Stop when no new entries are discovered (guard against cycles by
    tracking already-visited paths).
 
-> Entries under `knowledge/raw/` are **uncurated** — never auto-install them as a
-> dependency. If a selected entry links to a `raw/` file, warn the user and skip it.
+> Entries under `knowledge/source/raw/` are **uncurated** — never auto-install them as a
+> dependency. If a selected entry links to a `source/raw/` file, warn the user and skip it.
 
 #### 5.2 Build the File Manifest
 

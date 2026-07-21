@@ -1,7 +1,7 @@
 ---
 name: "aiws-create-knowledge"
 version: "1.0.0"
-description: "Curates raw Markdown dropped in knowledge/raw/ into standards-compliant knowledge entries — classifying each file by type (concept, system, workflow, policy, how-to, reference), regenerating it to match that type's example format and front-matter schema, and placing it in the correct taxonomy folder, processing files strictly one-at-a-time to preserve full context."
+description: "Curates raw Markdown dropped in knowledge/source/raw/ into standards-compliant knowledge entries — classifying each file by type (concept, system, workflow, policy, how-to, reference), regenerating it to match that type's example format and front-matter schema, and placing it in the correct taxonomy folder, processing files strictly one-at-a-time to preserve full context."
 tags: ["knowledge", "curation", "authoring", "taxonomy", "standards"]
 applies-to: ["agent-skills repo", "aiws workspace"]
 author: "William Theo (IT RDI IM TD)"
@@ -10,7 +10,7 @@ last-updated: "2026-07-20"
 
 # AIWS Create Knowledge
 
-Turns raw, unstructured Markdown in `knowledge/raw/` into **curated, standards-compliant
+Turns raw, unstructured Markdown in `knowledge/source/raw/` into **curated, standards-compliant
 knowledge entries**. For each raw file it **classifies the content by type**,
 **regenerates the Markdown** to match that type's example format and the `knowledge/`
 front-matter schema, and **places it in the correct taxonomy folder**. It processes
@@ -21,17 +21,17 @@ is lost during curation.
 
 Trigger phrases: "curate knowledge", "process the raw knowledge", "create knowledge from raw",
 "aiws create knowledge", "promote raw notes", "turn this note into a knowledge entry",
-"classify and file my knowledge", "clean up knowledge/raw"
+"classify and file my knowledge", "clean up knowledge/source/raw"
 
 Use this whenever there are unprocessed notes, pasted docs, transcripts, or draft
-Markdown sitting in `knowledge/raw/` that need to become proper, discoverable
+Markdown sitting in `knowledge/source/raw/` that need to become proper, discoverable
 knowledge entries.
 
 ---
 
 ## Purpose
 
-`knowledge/raw/` is a staging area for unprocessed source material — nothing there
+`knowledge/source/raw/` is a staging area for unprocessed source material — nothing there
 is authoritative and it must not be cited. To become useful, each raw note needs to
 be classified, given correct front-matter, reshaped to its type's format, and moved
 into the right folder.
@@ -58,8 +58,9 @@ compliant with the `knowledge/` taxonomy.
    use the front-matter schema.
 5. **No fabrication.** Do not invent facts to "complete" an entry. If the raw note is
    missing required metadata (owner, sources), ask the user or use a clear placeholder.
-6. **Non-destructive by default.** Do not delete the raw file automatically; propose
-   removal only after the curated entry is confirmed.
+6. **Non-destructive — move, don't delete.** Never delete source files. After an
+   entry is curated and confirmed, move the original from `source/raw/` to
+   `source/processed/` (see Step 6).
 
 ---
 
@@ -328,12 +329,12 @@ Find the knowledge root and list raw files awaiting curation:
 ```bash
 # Prefer workspace root; fall back to project/global installs
 for r in "knowledge" ".github/knowledge" "$HOME/.copilot/knowledge"; do
-  [ -d "$r/raw" ] && echo "ROOT: $r" && ls -1 "$r/raw"/*.md 2>/dev/null
+  [ -d "$r/source/raw" ] && echo "ROOT: $r" && ls -1 "$r/source/raw"/*.md 2>/dev/null
 done
 ```
 
-Exclude `raw/README.md` from the list. If no raw `.md` files exist, report:
-> ✅ `knowledge/raw/` has no files to curate. Nothing to do.
+Exclude `source/raw/README.md` from the list. If no raw `.md` files exist, report:
+> ✅ `knowledge/source/raw/` has no files to curate. Nothing to do.
 
 and stop.
 
@@ -382,7 +383,7 @@ Show the user the plan for this single file:
 ```
 📄 Curation Plan (file 1 of N)
 ─────────────────────────────────────────────
-Source      : knowledge/raw/<raw-file>.md
+Source      : knowledge/source/raw/<raw-file>.md
 Classified  : how-to
 Destination : knowledge/how-to/<kebab-name>.md
 Title       : "How to ..."
@@ -400,12 +401,20 @@ On **YES**:
   whether to pick a new name or update the existing file.
 - Write the curated file to the destination.
 
-### Step 6 — Handle the Raw Source
+### Step 6 — Move the Source to `processed/`
 
-After the curated entry is written and confirmed:
-- Ask the user whether to **remove** the now-promoted raw file:
-> **"The curated entry is filed. Remove the original `knowledge/raw/<raw-file>.md`? (YES/keep)"**
-- Only delete on explicit confirmation. Never auto-delete.
+After the curated entry is written and confirmed, move the original source file
+from `source/raw/` into `source/processed/` so `source/raw/` only ever holds items
+still awaiting curation:
+
+```bash
+mkdir -p "<knowledge-root>/source/processed"
+mv "<knowledge-root>/source/raw/<raw-file>.md" "<knowledge-root>/source/processed/<raw-file>.md"
+```
+
+- **Move, never delete** — the processed source is preserved for provenance.
+- If a converted file has a companion original (e.g., a `.pdf` and its `.md`), move
+  both into `source/processed/`.
 
 ### Step 7 — Loop to the Next File
 
@@ -423,11 +432,11 @@ When the queue is empty, summarize:
 Processed : 3 raw file(s), one at a time
 
 Filed:
-  ✅ knowledge/how-to/rotate-api-keys.md      (from raw/notes-keys.md)
-  ✅ knowledge/concepts/rate-limiting.md      (from raw/rl-thread.md)
-  ✅ knowledge/policies/data-retention.md     (from raw/retention.md)
+  ✅ knowledge/how-to/rotate-api-keys.md      (from source/raw/notes-keys.md)
+  ✅ knowledge/concepts/rate-limiting.md      (from source/raw/rl-thread.md)
+  ✅ knowledge/policies/data-retention.md     (from source/raw/retention.md)
 
-Raw removed: 2   |   Raw kept: 1
+Sources moved to processed/: 3
 Next: run aiws-validate-knowledge to confirm compliance.
 ─────────────────────────────────────────────
 ```
@@ -440,12 +449,12 @@ Suggest running the `aiws-validate-knowledge` skill to confirm the new entries p
 
 ### ✅ Good — One-at-a-Time Curation
 
-**Raw queue:** `raw/keys.md`, `raw/rate-limit.md`
+**Raw queue:** `source/raw/keys.md`, `source/raw/rate-limit.md`
 
-1. Process `raw/keys.md` **only**: read fully → classify as `how-to` → regenerate
+1. Process `source/raw/keys.md` **only**: read fully → classify as `how-to` → regenerate
    with `## Prerequisites / ## Steps / ## Verification / ## Rollback` → plan → YES →
    write `knowledge/how-to/rotate-api-keys.md` → ask about removing raw → next.
-2. **Then** process `raw/rate-limit.md`: read → classify as `concept` → regenerate
+2. **Then** process `source/raw/rate-limit.md`: read → classify as `concept` → regenerate
    mirroring the `concept` section shape → write → handle raw.
 3. Final report → suggest `aiws-validate-knowledge`.
 
@@ -479,7 +488,7 @@ Forbidden — `type` must always match the destination folder (see `aiws-validat
 
 | Step | Action | Guardrail |
 |---|---|---|
-| 1 | List raw files, build queue | Exclude `raw/README.md` |
+| 1 | List raw files, build queue | Exclude `source/raw/README.md` |
 | 2 | Read ONE file fully | No skimming/truncation |
 | 3 | Classify by type | Split if mixed |
 | 4 | Regenerate to standard | Preserve all content |

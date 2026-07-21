@@ -32,11 +32,13 @@ def build_ingest_prompt(*, validate: bool, auto: bool) -> str:
     steps = [
         "Run the knowledge ingestion pipeline for this workspace.",
         "1) Use the aiws-raw-to-markdown skill to convert EVERY non-Markdown file under "
-        "knowledge/raw/ into Markdown, written back into knowledge/raw/.",
+        "knowledge/source/raw/ into Markdown, written back into knowledge/source/raw/.",
         "2) Then use the aiws-create-knowledge skill to curate each Markdown file in "
-        "knowledge/raw/ into a standards-compliant knowledge entry — process ONE FILE AT "
-        "A TIME and file each into the correct taxonomy folder (concepts, systems, "
-        "workflows, policies, how-to, references). Skip files that are already curated.",
+        "knowledge/source/raw/ into a standards-compliant knowledge entry — process ONE "
+        "FILE AT A TIME and file each into the correct taxonomy folder (concepts, systems, "
+        "workflows, policies, how-to, references). After filing each entry, MOVE its source "
+        "file from knowledge/source/raw/ to knowledge/source/processed/. Skip files already "
+        "in processed/.",
     ]
     if validate:
         steps.append(

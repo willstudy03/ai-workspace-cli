@@ -309,10 +309,20 @@ What this lookup material covers and how to scan it, in one paragraph.
 """
 
 _RAW_README = """\
-# Raw (Staging)
+# Source · Raw (Staging)
 
-Uncurated staging area. Drop draft or unprocessed notes here, then promote them
-into the correct taxonomy folder once cleaned up. Files here are **not** authoritative.
+Drop unprocessed source files here (PDF, Word, PPT, Excel, Markdown, images, …).
+The `aiws-raw-to-markdown` skill converts them to Markdown; `aiws-create-knowledge`
+then curates each into the correct taxonomy folder and moves the original into
+`../processed/`. Files here are **not** authoritative.
+"""
+
+_PROCESSED_README = """\
+# Source · Processed
+
+Source files that have already been curated into knowledge entries are moved here
+from `../raw/`, so `raw/` only ever holds items still awaiting processing. Files
+here are **not** authoritative — they are kept for provenance/reference.
 """
 
 _OVERVIEW = """\
@@ -389,7 +399,8 @@ def _file_map(today: str) -> dict[str, str]:
         "knowledge/policies/example-policy.md": _POLICY.format(date=today),
         "knowledge/how-to/example-how-to.md": _HOWTO.format(date=today),
         "knowledge/references/example-reference-note.md": _REFERENCE_NOTE.format(date=today),
-        "knowledge/raw/README.md": _RAW_README,
+        "knowledge/source/raw/README.md": _RAW_README,
+        "knowledge/source/processed/README.md": _PROCESSED_README,
         "codebases/example-codebase/OVERVIEW.md": _OVERVIEW,
         "codebases/example-codebase/architecture/system-architecture.md": _ARCH_SYSTEM,
         "codebases/example-codebase/architecture/data-flow.md": _ARCH_DATAFLOW,

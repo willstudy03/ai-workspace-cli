@@ -35,7 +35,7 @@ On every user request, follow this order:
    as a new knowledge entry (see the ingestion pipeline).
 
 > Precedence when sources conflict: `.github/knowledge/` (curated) →
-> `.github/codebases/` docs → general knowledge. `.github/knowledge/raw/` is
+> `.github/codebases/` docs → general knowledge. `.github/knowledge/source/raw/` is
 > **staging only** — never authoritative, never cited.
 
 ---
@@ -49,8 +49,8 @@ All skills are in `.github/skills/<name>/SKILL.md`. Invoke by matching intent to
 |---|---|---|---|
 | **`aiws-ask-knowledge`** | User asks a question that should be answered from documented `.github/knowledge/` ("what do we know about…", "check the knowledge base", "grounded answer") | A cited answer + explicit gaps | Read-only |
 | **`aiws-codebase-analyst`** | An unfamiliar/undocumented codebase needs structured docs ("analyse this codebase", "document this repo") | `.github/codebases/<slug>/` architecture, modules, patterns, `metadata.json` | **Docs only — never code** |
-| **`aiws-raw-to-markdown`** | Non-Markdown files (PDF/Word/PPT/Excel/image/audio/HTML) are dropped in `.github/knowledge/raw/` and need converting | Markdown written back into `.github/knowledge/raw/` | Writes to `raw/` only |
-| **`aiws-create-knowledge`** | Raw Markdown in `.github/knowledge/raw/` must be curated into proper entries ("curate knowledge", "process the raw notes") | Standards-compliant entries filed into the taxonomy | Writes entries; non-destructive to raw |
+| **`aiws-raw-to-markdown`** | Non-Markdown files (PDF/Word/PPT/Excel/image/audio/HTML) are dropped in `.github/knowledge/source/raw/` and need converting | Markdown written back into `.github/knowledge/source/raw/` | Writes to `source/raw/` only |
+| **`aiws-create-knowledge`** | Raw Markdown in `.github/knowledge/source/raw/` must be curated into proper entries ("curate knowledge", "process the raw notes") | Standards-compliant entries filed into the taxonomy | Writes entries; moves processed sources to `source/processed/` |
 | **`aiws-validate-knowledge`** | New/changed `.github/knowledge/` files need checking ("validate knowledge", "is this entry correct") | Pass/fail report + fixes | Read-only |
 | **`aiws-create-skill`** | User wants to author a new reusable skill ("create a skill", "new SKILL.md") | A standards-compliant `SKILL.md` | Writes one skill |
 | **`aiws-validate-skill`** | New/changed skills, agents, scripts, references, or codebase docs need checking ("validate my changes", "check my new files") | Pass/fail report + fixes | Read-only |
@@ -74,8 +74,8 @@ All skills are in `.github/skills/<name>/SKILL.md`. Invoke by matching intent to
 
 ```
 Knowledge ingestion:
-  .github/knowledge/raw/ (binary)
-     └─(aiws-raw-to-markdown)─▶ .github/knowledge/raw/ (markdown)
+  .github/knowledge/source/raw/ (binary)
+     └─(aiws-raw-to-markdown)─▶ .github/knowledge/source/raw/ (markdown)
             └─(aiws-create-knowledge)─▶ .github/knowledge/{concepts|systems|workflows|policies|how-to|references}
                    └─(aiws-validate-knowledge)─▶ pass/fail
 
@@ -102,14 +102,14 @@ The `.github/knowledge/` layer is the single source of truth for durable, curate
 | `.github/knowledge/policies/` | `policy` | Rules, standards, must/should |
 | `.github/knowledge/how-to/` | `how-to` | Task-oriented guides |
 | `.github/knowledge/references/` | `reference` | Lookup tables, specs, cheat-sheets |
-| `.github/knowledge/raw/` | — | **Staging only.** Unprocessed, never cited |
+| `.github/knowledge/source/` | — | **Staging only.** `raw/` = incoming, `processed/` = curated originals. Never cited |
 
 **Rules:**
 
 1. **Answer from knowledge, cite the source.** Use `aiws-ask-knowledge`; every
    factual claim must trace to a specific entry, listed by file path.
 2. **No fabrication.** If the knowledge base is silent, say so — don't invent.
-3. **`raw/` is never authoritative.** Treat it as unverified staging; convert
+3. **`source/raw/` is never authoritative.** Treat it as unverified staging; convert
    (`aiws-raw-to-markdown`) and curate (`aiws-create-knowledge`) before use.
 4. **Curate one file at a time.** Never batch-curate raw notes; preserve full
    content and context.
@@ -175,10 +175,12 @@ After `aiws-workspace-init`, **all workspace folders live under `.github/`**
     │   ├── aiws-ask-knowledge/
     │   ├── aiws-create-knowledge/
     │   └── …                     ← 10 built-in aiws-* skills
-    ├── knowledge/                ← Curated notes + raw/ staging
+    ├── knowledge/                ← Curated notes + source/ staging
     │   ├── concepts/   systems/    workflows/
     │   ├── policies/   how-to/     references/
-    │   └── raw/                   ← staging only (never cited)
+    │   └── source/                   ← staging only (never cited)
+    │       ├── raw/                  ← incoming, unprocessed
+    │       └── processed/            ← curated source originals
     ├── agents/                   ← Agent persona definitions
     ├── codebases/                ← Per-project documentation (aiws-codebase-analyst)
     ├── references/               ← External specs/standards referenced by skills

@@ -52,7 +52,7 @@ The output is a sourced answer plus a clear statement of any gaps.
 3. **Cite everything.** Always list the exact source file paths the answer draws from.
 4. **Prefer authoritative entries.** Curated taxonomy folders (`concepts/`,
    `systems/`, `workflows/`, `policies/`, `how-to/`, `references/`) are
-   authoritative. `raw/` is staging — use it only as a weak signal and label it
+   authoritative. `source/raw/` is staging — use it only as a weak signal and label it
    clearly as unverified.
 5. **Respect status.** Entries with `status: deprecated` must be flagged as such;
    prefer `active` entries. Note `draft` entries as provisional.
@@ -73,7 +73,7 @@ Entries live under `knowledge/`, filed by `type`:
 | `knowledge/policies/` | `policy` | "Are we allowed to X?", "What's the rule on X?" |
 | `knowledge/how-to/` | `how-to` | "How do I do X?" |
 | `knowledge/references/` | `reference` | "What's the value/definition of X?" |
-| `knowledge/raw/` | — | Uncurated staging — treat as unverified |
+| `knowledge/source/raw/` | — | Uncurated staging — treat as unverified |
 
 Each entry has YAML front-matter (`title`, `type`, `owner`, `status`,
 `last_updated`, `tags`, optional `related`) and a `## Summary` body.
@@ -141,7 +141,7 @@ selected entry before answering — never answer from the grep line alone.
 
 For each selected entry, check its `related:` front-matter list and any inline
 links into `knowledge/`. Read those too if they add relevant context. Do **not**
-pull in `raw/` targets as authoritative.
+pull in `source/raw/` targets as authoritative.
 
 ### Step 5 — Decide: Answerable or Not
 
@@ -274,7 +274,7 @@ otherwise it must be omitted or labeled as unverified inference.
 | Entry directly answers | Answer + cite sources (6A) |
 | Some parts documented | Answer documented part, flag gaps (6B) |
 | Nothing found | State "not documented", don't guess (6C) |
-| Only `raw/` matches | Use cautiously, label as unverified staging |
+| Only `source/raw/` matches | Use cautiously, label as unverified staging |
 | `deprecated` entry matches | Flag it; prefer active alternatives |
 | Reasoning beyond text | Label explicitly as inference |
 

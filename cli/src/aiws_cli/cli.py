@@ -230,9 +230,9 @@ def ingest(
 ) -> None:
     """Run the knowledge-ingestion pipeline: raw-to-markdown -> create-knowledge.
 
-    Converts everything in ``knowledge/raw/`` to Markdown and curates it into proper
-    knowledge entries by launching your AI tool with a two-skill pipeline prompt
-    (optionally validating afterwards).
+    Converts everything in ``knowledge/source/raw/`` to Markdown and curates it into
+    proper knowledge entries by launching your AI tool with a two-skill pipeline
+    prompt (optionally validating afterwards).
     """
     target = Path(target_str).expanduser().resolve()
     _print_header(target, "ingest")
@@ -246,9 +246,9 @@ def ingest(
     manager = detect_package_manager()
     ensure_markitdown(manager, auto_install=install_markitdown)
 
-    raw_dir = target / tool.workspace_root / "knowledge" / "raw"
+    raw_dir = target / tool.workspace_root / "knowledge" / "source" / "raw"
     if not raw_dir.is_dir():
-        err(f"No knowledge/raw/ folder at {raw_dir}.")
+        err(f"No knowledge/source/raw/ folder at {raw_dir}.")
         info(f"Run 'aiws init --tool {tool.key}' first, then add files to ingest.")
         sys.exit(1)
 
@@ -257,9 +257,9 @@ def ingest(
     ]
     if not raw_files:
         warn(f"Nothing to ingest — {raw_dir} has no files (besides README).")
-        info("Drop PDF/Word/PPT/Excel/Markdown/etc. into knowledge/raw/, then re-run.")
+        info("Drop PDF/Word/PPT/Excel/Markdown/etc. into knowledge/source/raw/, then re-run.")
         sys.exit(0)
-    ok(f"Found {len(raw_files)} file(s) to ingest in knowledge/raw/")
+    ok(f"Found {len(raw_files)} file(s) to ingest in knowledge/source/raw/")
 
     skills_dir = target / tool.skills_dest
     missing = [
@@ -280,7 +280,7 @@ def ingest(
     # ── Plan + confirm ────────────────────────────────────────────────────────
     step("Plan", "knowledge ingestion")
     console.print(f"      Tool     : [bold]{tool.display_name}[/bold]")
-    console.print(f"      Source   : {tool.workspace_root}/knowledge/raw/  [dim]({len(raw_files)} file(s))[/dim]")
+    console.print(f"      Source   : {tool.workspace_root}/knowledge/source/raw/  [dim]({len(raw_files)} file(s))[/dim]")
     console.print(f"      Pipeline : aiws-raw-to-markdown → aiws-create-knowledge"
                   + (" → aiws-validate-knowledge" if do_validate else ""))
     console.print(f"      Mode     : {'headless (--auto)' if auto else 'interactive'}")

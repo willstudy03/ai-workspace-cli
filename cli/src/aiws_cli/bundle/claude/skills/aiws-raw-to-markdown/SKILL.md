@@ -1,6 +1,6 @@
 ---
 name: "aiws-raw-to-markdown"
-description: "Converts non-Markdown source files dropped in knowledge/raw/ (PDF, Word, PowerPoint, Excel, images, audio, HTML, CSV/JSON/XML, EPub, ZIP, and more) into Markdown using Microsoft's open-source MarkItDown tool, writing the output back under knowledge/raw/ so aiws-create-knowledge can curate it into proper knowledge entries."
+description: "Converts non-Markdown source files dropped in knowledge/source/raw/ (PDF, Word, PowerPoint, Excel, images, audio, HTML, CSV/JSON/XML, EPub, ZIP, and more) into Markdown using Microsoft's open-source MarkItDown tool, writing the output back under knowledge/source/raw/ so aiws-create-knowledge can curate it into proper knowledge entries."
 tags: ["knowledge", "conversion", "markitdown", "raw", "ingestion"]
 applies-to: ["agent-skills repo", "aiws workspace"]
 author: "William Theo (IT RDI IM TD)"
@@ -9,9 +9,9 @@ last-updated: "2026-07-20"
 
 # AIWS Raw to Markdown
 
-Converts raw, non-Markdown source files placed under `knowledge/raw/` into
+Converts raw, non-Markdown source files placed under `knowledge/source/raw/` into
 Markdown using **MarkItDown** (Microsoft's open-source file-to-Markdown utility).
-The converted `.md` files are written **back under `knowledge/raw/`** — they remain
+The converted `.md` files are written **back under `knowledge/source/raw/`** — they remain
 staging material, ready to be curated into proper knowledge entries by the
 `aiws-create-knowledge` skill. This skill only converts; it does **not** classify,
 reshape, or file entries.
@@ -19,12 +19,12 @@ reshape, or file entries.
 ## When to Use
 
 Trigger phrases: "convert raw to markdown", "markitdown the raw files", "raw to markdown",
-"turn my PDF/Word/PPT into markdown", "convert knowledge/raw", "ingest raw documents",
+"turn my PDF/Word/PPT into markdown", "convert knowledge/source/raw", "ingest raw documents",
 "prepare raw files for knowledge", "aiws raw to markdown"
 
 Use this as the **first stage** of knowledge ingestion: whenever binary or
 non-Markdown documents (PDFs, Office files, images, audio, HTML, spreadsheets,
-etc.) land in `knowledge/raw/` and need to become Markdown before curation.
+etc.) land in `knowledge/source/raw/` and need to become Markdown before curation.
 
 ---
 
@@ -35,7 +35,7 @@ Word/PowerPoint/Excel files, images, or exports — formats the curation skill c
 process directly.
 
 This skill bridges that gap. It runs MarkItDown over each non-Markdown file in
-`knowledge/raw/`, producing structure-preserving Markdown (headings, lists, tables,
+`knowledge/source/raw/`, producing structure-preserving Markdown (headings, lists, tables,
 links) that stays in the raw staging area. The result is a clean handoff:
 `aiws-raw-to-markdown` (convert) → `aiws-create-knowledge` (classify + curate + file).
 
@@ -44,7 +44,7 @@ links) that stays in the raw staging area. The result is a clean handoff:
 ## Pipeline Position
 
 ```
-knowledge/raw/  ──[aiws-raw-to-markdown]──▶  knowledge/raw/  (now Markdown)
+knowledge/source/raw/  ──[aiws-raw-to-markdown]──▶  knowledge/source/raw/  (now Markdown)
                                                    │
                                                    ▼
                                           [aiws-create-knowledge]
@@ -58,17 +58,17 @@ knowledge/raw/  ──[aiws-raw-to-markdown]──▶  knowledge/raw/  (now Mark
 ## Core Principles
 
 1. **Convert only — never curate.** This skill produces Markdown; it does not
-   classify content, rewrite it into a type format, or move it out of `raw/`. That
+   classify content, rewrite it into a type format, or move it out of `source/raw/`. That
    is `aiws-create-knowledge`'s job.
 2. **Non-destructive.** Never delete or overwrite the original source file. Leave it
    in place; only add the converted `.md`.
-3. **Stay in `raw/`.** All output remains under `knowledge/raw/` (staging). Nothing
+3. **Stay in `source/raw/`.** All output remains under `knowledge/source/raw/` (staging). Nothing
    authoritative is produced here.
 4. **Preserve structure & content.** Use MarkItDown so headings, lists, tables, and
    links survive the conversion. Do not hand-summarize.
 5. **Skip what's already Markdown.** Do not re-convert existing `.md` files or
    `README.md`.
-6. **Sanitize inputs.** Only convert local files the user placed in `raw/`. Do not
+6. **Sanitize inputs.** Only convert local files the user placed in `source/raw/`. Do not
    pass untrusted URLs/paths; prefer `convert_local()` in the Python API.
 
 ---
@@ -125,18 +125,18 @@ pip install 'markitdown[all]'
 
 ### Step 1 — Locate the Raw Folder and Inventory Source Files
 
-Find the knowledge root and list **non-Markdown** files in `raw/`:
+Find the knowledge root and list **non-Markdown** files in `source/raw/`:
 
 ```bash
 for r in "knowledge" ".claude/knowledge" "$HOME/.claude/knowledge"; do
-  [ -d "$r/raw" ] && echo "ROOT: $r/raw" && \
-    find "$r/raw" -maxdepth 1 -type f ! -iname "*.md" ! -iname "README.md" | sort
+  [ -d "$r/source/raw" ] && echo "ROOT: $r/source/raw" && \
+    find "$r/source/raw" -maxdepth 1 -type f ! -iname "*.md" ! -iname "README.md" | sort
 done
 ```
 
 Build a **Conversion Queue** of the non-Markdown files found. If the queue is empty,
 report:
-> ✅ No non-Markdown files found in `knowledge/raw/`. Nothing to convert.
+> ✅ No non-Markdown files found in `knowledge/source/raw/`. Nothing to convert.
 
 and stop. (Files that are already `.md` are left for `aiws-create-knowledge`.)
 
@@ -146,17 +146,14 @@ Run the check from **Prerequisites**. If `MARKITDOWN_NOT_FOUND`, guide the user
 through installation (venv + `pip install 'markitdown[all]'`). Confirm it works
 before converting.
 
-### Step 3 — Prepare the Output Location (Stays in `raw/`)
+### Step 3 — Output Location (Directly in `source/raw/`)
 
-Keep converted Markdown inside the raw staging area. Default output folder:
+Converted Markdown is written **directly into `source/raw/`**, next to each
+original source file (same base name, `.md` extension). No subfolder is used — this
+keeps the output exactly where `aiws-create-knowledge` looks for `.md` to curate.
 
-```bash
-mkdir -p "knowledge/raw/converted"
-```
-
-> Rationale: output stays under `raw/` so it is still treated as unprocessed
-> staging material and gets curated by `aiws-create-knowledge`. Confirm the output
-> folder with the user if they prefer a different location under `raw/`.
+> Rationale: output stays in `source/raw/` (unprocessed staging). After curation,
+> `aiws-create-knowledge` moves both the original and its `.md` to `source/processed/`.
 
 ### Step 4 — Convert Each File
 
@@ -165,7 +162,7 @@ same base name into the output folder:
 
 ```bash
 # CLI form
-markitdown "knowledge/raw/<source-file>" -o "knowledge/raw/converted/<source-stem>.md"
+markitdown "knowledge/source/raw/<source-file>" -o "knowledge/source/raw/<source-stem>.md"
 ```
 
 Or the Python API for finer control / local-only safety:
@@ -173,8 +170,8 @@ Or the Python API for finer control / local-only safety:
 ```python
 from markitdown import MarkItDown
 md = MarkItDown(enable_plugins=False)
-result = md.convert_local("knowledge/raw/<source-file>")   # convert_local avoids remote fetches
-open("knowledge/raw/converted/<source-stem>.md", "w", encoding="utf-8").write(result.text_content)
+result = md.convert_local("knowledge/source/raw/<source-file>")   # convert_local avoids remote fetches
+open("knowledge/source/raw/<source-stem>.md", "w", encoding="utf-8").write(result.text_content)
 ```
 
 Rules for each conversion:
@@ -192,19 +189,19 @@ Rules for each conversion:
 List the produced Markdown and summarize:
 
 ```bash
-ls -la "knowledge/raw/converted/"
+ls -la "knowledge/source/raw/"
 ```
 
 ```
 ✅ Raw → Markdown Conversion Complete
 ─────────────────────────────────────────────
 Tool     : MarkItDown
-Output   : knowledge/raw/converted/   (still in raw/ staging)
+Output   : knowledge/source/raw/   (Markdown alongside originals)
 
 Converted:
-  ✅ knowledge/raw/converted/q3-report.md        (from q3-report.pdf)
-  ✅ knowledge/raw/converted/runbook.md          (from runbook.docx)
-  ✅ knowledge/raw/converted/metrics.md          (from metrics.xlsx)
+  ✅ knowledge/source/raw/q3-report.md        (from q3-report.pdf)
+  ✅ knowledge/source/raw/runbook.md          (from runbook.docx)
+  ✅ knowledge/source/raw/metrics.md          (from metrics.xlsx)
 
 Skipped / failed:
   ❌ diagram.heic — unsupported format (kept original)
@@ -216,7 +213,7 @@ Originals: kept (non-destructive)
 ### Step 6 — Hand Off to Curation
 
 Tell the user the next stage:
-> The Markdown is staged under `knowledge/raw/converted/`. Run the
+> The Markdown is staged under `knowledge/source/raw/`. Run the
 > **`aiws-create-knowledge`** skill to classify each file, reshape it to its type's
 > format, and file it into the correct `knowledge/` folder.
 
@@ -232,8 +229,8 @@ Do **not** curate or move files yourself — that is out of scope for this skill
 
 1. Inventory → queue = `report.pdf`, `notes.docx`, `data.xlsx` (`already.md` skipped).
 2. MarkItDown present (`markitdown --version` OK).
-3. `mkdir -p knowledge/raw/converted`.
-4. Convert each → `converted/report.md`, `converted/notes.md`, `converted/data.md`;
+3. No subfolder needed — output goes directly into `source/raw/`.
+4. Convert each → `source/raw/report.md`, `source/raw/notes.md`, `source/raw/data.md`;
    verify non-empty; originals kept.
 5. Report ✅ → tell user to run `aiws-create-knowledge`.
 
@@ -246,12 +243,12 @@ Do **not** curate or move files yourself — that is out of scope for this skill
 
 > ❌ Classifying the converted file as a `concept` and moving it to `knowledge/concepts/`.
 
-Forbidden — this skill only converts and keeps output in `raw/`. Classification and
+Forbidden — this skill only converts and keeps output in `source/raw/`. Classification and
 filing belong to `aiws-create-knowledge`.
 
 > ❌ Deleting or overwriting the original source file after conversion.
 
-Forbidden — conversion is non-destructive; originals stay in `raw/`.
+Forbidden — conversion is non-destructive; originals stay in `source/raw/`.
 
 > ❌ Hand-writing Markdown from the source instead of using MarkItDown.
 
@@ -263,9 +260,9 @@ Forbidden — always use MarkItDown so structure (tables, headings, lists) is pr
 
 | Step | Action | Guardrail |
 |---|---|---|
-| 1 | Inventory non-`.md` files in `raw/` | Skip `.md` and `README.md` |
+| 1 | Inventory non-`.md` files in `source/raw/` | Skip `.md` and `README.md` |
 | 2 | Ensure MarkItDown installed | Python 3.10+, `markitdown[all]` |
-| 3 | Prepare `raw/converted/` | Output stays in `raw/` |
+| 3 | Write `.md` into `source/raw/` | Alongside originals; no subfolder |
 | 4 | `markitdown <src> -o <out>.md` | Non-destructive; retry on missing extra |
 | 5 | Verify + report | Note skipped/failed files |
 | 6 | Hand off | Next: `aiws-create-knowledge` |

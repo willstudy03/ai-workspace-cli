@@ -64,7 +64,9 @@ The skill scaffolds this tree under the chosen `<target-root>`
 │   ├── policies/    example-policy.md
 │   ├── how-to/      example-how-to.md
 │   ├── references/  example-reference-note.md
-│   └── raw/         README.md
+│   └── source/
+│       ├── raw/         README.md
+│       └── processed/   README.md
 ├── codebases/
 │   └── example-codebase/
 │       ├── OVERVIEW.md
@@ -157,7 +159,7 @@ Show the user exactly what will be created vs. skipped:
 Target : ~/.claude/   (Global)
 
 Folders to create:
-  agents/  skills/  references/  knowledge/{concepts,systems,workflows,policies,how-to,references,raw}/
+  agents/  skills/  references/  knowledge/{concepts,systems,workflows,policies,how-to,references}/  knowledge/source/{raw,processed}/
   codebases/  docs/  scripts/
 
 Example files to seed:
@@ -171,7 +173,8 @@ Example files to seed:
   ✅ knowledge/policies/example-policy.md
   ✅ knowledge/how-to/example-how-to.md
   ✅ knowledge/references/example-reference-note.md
-  ✅ knowledge/raw/README.md
+  ✅ knowledge/source/raw/README.md
+  ✅ knowledge/source/processed/README.md
   ✅ codebases/example-codebase/OVERVIEW.md
   ✅ codebases/example-codebase/architecture/{system-architecture,data-flow,component-diagram,tech-stack}.md
   ✅ codebases/example-codebase/modules/example-module/MODULE.md
@@ -194,7 +197,8 @@ mkdir -p "<target-root>"/{agents,skills,references,docs,scripts}
 mkdir -p "<target-root>"/agents/example-agent/context
 mkdir -p "<target-root>"/skills/example-skill
 mkdir -p "<target-root>"/references/example-reference
-mkdir -p "<target-root>"/knowledge/{concepts,systems,workflows,policies,how-to,references,raw}
+mkdir -p "<target-root>"/knowledge/{concepts,systems,workflows,policies,how-to,references}
+mkdir -p "<target-root>"/knowledge/source/{raw,processed}
 mkdir -p "<target-root>"/codebases/example-codebase/architecture
 mkdir -p "<target-root>"/codebases/example-codebase/modules/example-module
 ```
@@ -565,13 +569,25 @@ What this lookup material covers and how to scan it, in one paragraph.
 ````
 
 
-### `knowledge/raw/README.md`
+### `knowledge/source/raw/README.md`
 
 ````markdown
-# Raw (Staging)
+# Source · Raw (Staging)
 
-Uncurated staging area. Drop draft or unprocessed notes here, then promote them
-into the correct taxonomy folder once cleaned up. Files here are **not** authoritative.
+Drop unprocessed source files here (PDF, Word, PPT, Excel, Markdown, …). The
+`aiws-raw-to-markdown` skill converts them to Markdown; `aiws-create-knowledge`
+curates each into the correct taxonomy folder and moves the original into
+`../processed/`. Files here are **not** authoritative.
+````
+
+### `knowledge/source/processed/README.md`
+
+````markdown
+# Source · Processed
+
+Source files already curated into knowledge entries are moved here from `../raw/`,
+so `raw/` only ever holds items still awaiting processing. Files here are **not**
+authoritative — kept for provenance.
 ````
 
 ### `codebases/example-codebase/OVERVIEW.md`

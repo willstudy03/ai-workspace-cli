@@ -40,7 +40,7 @@ Ten skills, identical across `.claude/skills/`, `.github/skills/`, and `.codex/s
 |---|---|---|
 | **`aiws-ask-knowledge`** | Grounded, cited Q&A over the knowledge layer | Read-only |
 | **`aiws-codebase-analyst`** | Turns a codebase into structured architecture/module docs | Docs only |
-| **`aiws-raw-to-markdown`** | Converts PDFs/Office/images/etc. in `raw/` to Markdown (MarkItDown) | Writes `raw/` |
+| **`aiws-raw-to-markdown`** | Converts PDFs/Office/images/etc. in `source/raw/` to Markdown (MarkItDown) | Writes `source/raw/` |
 | **`aiws-create-knowledge`** | Curates raw Markdown into standards-compliant knowledge entries | Writes entries |
 | **`aiws-validate-knowledge`** | Checks knowledge entries against taxonomy + front-matter rules | Read-only |
 | **`aiws-create-skill`** | Interactive authoring of a new standards-compliant skill | Writes one skill |
@@ -67,7 +67,7 @@ file's folder MUST match its `type`:
 | `knowledge/policies/` | `policy` | Rules, standards |
 | `knowledge/how-to/` | `how-to` | Task-oriented guides |
 | `knowledge/references/` | `reference` | Specs, cheat-sheets |
-| `knowledge/raw/` | — | **Staging only — never cited** |
+| `knowledge/source/raw/` | — | **Staging only — never cited** |
 ### Skill
 A self-contained `SKILL.md` (in its own `kebab-case` folder) that tells an agent how
 to perform one task. Built-in workspace skills use the `aiws-` prefix.
@@ -93,7 +93,7 @@ An `agents/<role>/AGENT.md` persona defining goals, constraints, and the skills 
 | *"Set up the workspace structure"* | `aiws-workspace-init` |
 | *"What do we know about idempotency?"* | `aiws-ask-knowledge` |
 | *"I dropped a PDF in raw — convert it"* | `aiws-raw-to-markdown` |
-| *"Curate the notes in `raw/`"* | `aiws-create-knowledge` |
+| *"Curate the notes in `source/raw/`"* | `aiws-create-knowledge` |
 | *"Document this codebase"* | `aiws-codebase-analyst` |
 | *"Create a skill for X"* | `aiws-create-skill` |
 | *"Validate my new files"* | `aiws-validate-skill` / `aiws-validate-knowledge` |
@@ -160,7 +160,7 @@ ai-workspace/
 ```
 <tool-root>/
 ├── skills/       ← Reusable skills (aiws-* built-ins + your own)
-├── knowledge/    ← concepts/ systems/ workflows/ policies/ how-to/ references/ + raw/
+├── knowledge/    ← concepts/ systems/ workflows/ policies/ how-to/ references/ + source/raw/
 ├── agents/       ← Agent persona definitions
 ├── codebases/    ← Per-project architecture & module docs
 ├── references/   ← External specs/standards referenced by skills

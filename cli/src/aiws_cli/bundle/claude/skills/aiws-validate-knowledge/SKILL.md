@@ -111,7 +111,7 @@ For every file, determine its taxonomy `type` from the folder it sits in:
 | `knowledge/policies/` | `policy` |
 | `knowledge/how-to/` | `how-to` |
 | `knowledge/references/` | `reference` |
-| `knowledge/raw/` | (staging — relaxed rules, see 5.4) |
+| `knowledge/source/raw/` | (staging — relaxed rules, see 5.4) |
 | anything else under `knowledge/` | **Unknown** |
 
 **Unknown** locations are flagged as warnings — the entry may be misfiled.
@@ -135,7 +135,7 @@ Read each file with available tools. For each entry collect:
 
 - [ ] File must reside directly inside one of the taxonomy folders in Step 3
       (e.g., `knowledge/concepts/<entry>.md`), not nested deeper.
-- [ ] The folder must be one of the six curated types (or `raw/`).
+- [ ] The folder must be one of the six curated types (or `source/raw/`).
 
 #### 5.2 Filename Rules
 
@@ -172,9 +172,9 @@ are **required** unless marked optional:
 - [ ] The body must open with a `## Summary` section that is non-empty.
 - [ ] File must not be an empty placeholder or contain unmodified template TODOs.
 
-#### 5.5 Raw Staging Files (`knowledge/raw/`)
+#### 5.5 Raw Staging Files (`knowledge/source/raw/`)
 
-Files under `knowledge/raw/` are uncurated staging material:
+Files under `knowledge/source/raw/` are uncurated staging material:
 
 - [ ] Only require: `kebab-case.md` filename and a non-empty body.
 - [ ] Front-matter and `## Summary` are **recommended**, not required — warn if missing.
