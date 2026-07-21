@@ -28,6 +28,11 @@ All notable changes to the `aiws` CLI are documented here. The format is based o
   `scripts/sync_bundle.sh`.
 
 ### Changed
+- **`aiws init` launches the agent by default** to run `aiws-workspace-init`;
+  `--scaffold` is an explicit opt-in that builds the tree natively in Python (no
+  agent). Previously native scaffolding was offered by default.
+- **Headless is the default** launch mode for both `aiws init` and `aiws ingest`
+  (`--auto` is the default; pass `--interactive` to approve actions per-step).
 - **Knowledge staging restructured**: `knowledge/raw/` → `knowledge/source/` with
   `source/raw/` (incoming) and `source/processed/` (curated). `aiws-create-knowledge`
   now **moves** processed sources to `source/processed/` instead of deleting them.

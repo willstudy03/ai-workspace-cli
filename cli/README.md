@@ -70,16 +70,17 @@ What it does, in order:
    | GitHub Copilot | `.github/copilot-instructions.md` | `.github/skills/` |
    | OpenAI Codex   | `AGENTS.md`                       | `.codex/skills/`  |
 
-5. **Launch the agent** — opens your AI tool and asks it to run the
-   `aiws-workspace-init` skill to scaffold the full workspace folder tree. By
-   default this is an interactive launch; pass `--auto` to run it **headless with
-   auto-approval** so the skill completes end-to-end without prompts:
+5. **Launch the agent (default)** — opens your AI tool and asks it to run the
+   `aiws-workspace-init` skill to build the workspace. This is the default; pass
+   `--scaffold` instead to build the tree natively in Python with **no agent**
+   (see below). By default the launch is **headless with auto-approval**; pass
+   `--interactive` to approve actions yourself:
 
-   | Tool           | Interactive launch      | `--auto` (headless)                                        |
-   |----------------|-------------------------|------------------------------------------------------------|
-   | Claude Code    | `claude "<prompt>"`     | `claude -p "<prompt>" --permission-mode acceptEdits`       |
-   | GitHub Copilot | `copilot -i "<prompt>"` | `copilot -p "<prompt>" --allow-all-tools --allow-all-paths`|
-   | OpenAI Codex   | `codex "<prompt>"`      | `codex exec --full-auto "<prompt>"`                        |
+   | Tool           | Headless (default)                                         | Interactive (`--interactive`) |
+   |----------------|------------------------------------------------------------|-------------------------------|
+   | Claude Code    | `claude -p "<prompt>" --permission-mode acceptEdits`       | `claude "<prompt>"`           |
+   | GitHub Copilot | `copilot -p "<prompt>" --allow-all-tools --allow-all-paths`| `copilot -i "<prompt>"`       |
+   | OpenAI Codex   | `codex exec --full-auto "<prompt>"`                        | `codex "<prompt>"`            |
 
    **First-time sign-in:** launching an unauthenticated CLI fails — e.g.
    `copilot -p` prints *"No authentication information found"* and exits instead of
@@ -103,23 +104,23 @@ Your choices are saved to `<workspace>/.aiws/config.toml`.
 
 ### Direct scaffolding (no agent, no permission prompts)
 
-When you launch an AI tool to run `aiws-workspace-init`, it asks you to approve
-each file/folder it creates. To skip all of that, `aiws` can build the **entire
-workspace folder tree itself in Python** — instantly, deterministically, and with
-no per-action confirmations:
+By default `aiws init` launches the AI agent to run `aiws-workspace-init`. As an
+alternative, `--scaffold` builds the **entire workspace folder tree itself in
+Python** — instantly, deterministically, and with no agent or per-action
+confirmations:
 
 ```bash
-aiws init --scaffold        # create the structure directly, then stop (no launch)
+aiws init --scaffold        # build the structure natively, no agent launch
 ```
 
 This creates the full tree under the tool's workspace root (`.github/`, `.claude/`,
 or `.codex/`) and seeds every folder with a standards-compliant `example-*` file
 (agents, skills, references, knowledge/{concepts,systems,workflows,policies,how-to,
-references, source/raw, source/processed}, codebases, docs, scripts). It's **additive and idempotent** —
-existing files are skipped (use `--overwrite` to replace). By default the wizard
-offers this; when scaffolding is done the agent launch is skipped (the structure
-already exists). The generated files match the `aiws-workspace-init` skill and pass
-`aiws-validate-skill` / `aiws-validate-knowledge`.
+references, source/raw, source/processed}, codebases, docs, scripts). It's **additive
+and idempotent** — existing files are skipped (use `--overwrite` to replace). When
+`--scaffold` is used the agent is not launched (the structure already exists). The
+generated files match the `aiws-workspace-init` skill and pass `aiws-validate-skill`
+/ `aiws-validate-knowledge`.
 
 ### Using aiws without npm (pure Python)
 
@@ -153,7 +154,8 @@ aiws init --no-track              # don't track an upstream skill market
 aiws init --no-launch             # set up files but don't open the AI tool
 aiws init --scaffold              # build the full workspace tree directly (no agent)
 aiws init --no-tool-cli           # pure-Python run: don't check/install the tool CLI (no npm)
-aiws init --auto                  # launch the AI tool headless and run init to completion
+aiws init --auto                  # headless launch (default) — run init to completion
+aiws init --interactive           # launch the tool interactively (approve actions)
 aiws init --no-git                # skip installing git during preflight
 aiws init --no-markitdown         # skip installing MarkItDown during preflight
 aiws init --overwrite             # overwrite existing instruction/skill files
@@ -216,9 +218,9 @@ skills are installed. The AI tool is resolved from `--tool`, else `.aiws/config.
 else a prompt.
 
 ```bash
-aiws ingest                       # interactive: you approve each step
+aiws ingest                       # headless, hands-free (default)
 aiws ingest --input ./report.pdf  # stage a file into source/raw/, then ingest
-aiws ingest --auto                # headless, hands-free, no confirmations
+aiws ingest --interactive         # approve each step yourself
 aiws ingest --no-validate         # skip the validate-knowledge step
 aiws ingest --tool claude -y      # preselect tool, accept defaults
 ```

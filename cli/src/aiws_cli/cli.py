@@ -63,12 +63,13 @@ def cli() -> None:
                    "Use --no-tool-cli for a pure-Python, npm-free run.")
 @click.option("--launch/--no-launch", "do_launch", default=None,
               help="Launch the AI tool to run aiws-workspace-init when done.")
-@click.option("--auto", is_flag=True,
-              help="Launch the AI tool headless (auto-approved) and run the init skill "
-                   "to completion.")
-@click.option("--scaffold/--no-scaffold", "scaffold", default=None,
-              help="Create the full workspace folder tree directly in Python "
-                   "(no agent, no per-action permission prompts).")
+@click.option("--auto/--interactive", "auto", default=True,
+              help="When launching, run the AI tool headless & auto-approved (default) "
+                   "or interactively with per-action approvals (--interactive).")
+@click.option("--scaffold", "scaffold", is_flag=True, default=False,
+              help="Build the workspace tree natively in Python — no agent, no "
+                   "per-action prompts. By default aiws launches the agent to run "
+                   "aiws-workspace-init instead.")
 @click.option("-y", "--yes", "assume_yes", is_flag=True, help="Accept defaults; no prompts.")
 def init(
     target_str: str,
@@ -82,7 +83,7 @@ def init(
     check_tool_cli: bool,
     do_launch: bool | None,
     auto: bool,
-    scaffold: bool | None,
+    scaffold: bool,
     assume_yes: bool,
 ) -> None:
     """Set up an AI-agent workspace in the current (or given) directory."""
@@ -149,14 +150,7 @@ def init(
         cfg_path = save_config(target, cfg)
         ok(f"Wrote {cfg_path.relative_to(target)}")
 
-        # ── 6b. Native scaffold (deterministic, no agent, no permission prompts)
-        if scaffold is None:
-            scaffold = assume_yes or Confirm.ask(
-                "    Create the full workspace structure now "
-                "(directly, no agent or per-action confirmations)?",
-                default=True,
-                console=console,
-            )
+        # ── 6b. Native scaffold (only when --scaffold is passed) ──────────────
         if scaffold:
             step("Scaffolding", "workspace structure")
             for line in scaffold_workspace(target / tool.workspace_root, overwrite=overwrite):
@@ -169,37 +163,32 @@ def init(
         console.print("\n[yellow]init interrupted.[/yellow]")
         sys.exit(1)
 
-    # ── 7. Summary ────────────────────────────────────────────────────────────
-    _print_summary(tool, target, track_market, scaffolded=bool(scaffold))
-
-    # ── 8. Launch the agent to run aiws-workspace-init ────────────────────────
-    # --auto implies launching (headless) unless the user explicitly said --no-launch.
-    if auto and do_launch is None:
-        do_launch = True
-    # Without the tool CLI ensured, don't offer to launch unless explicitly asked.
-    if not check_tool_cli and do_launch is None and not auto:
-        do_launch = False
-    # If we already scaffolded natively, the agent isn't needed to build structure.
-    if scaffold and do_launch is None and not auto:
-        do_launch = False
+    # ── 7. Decide whether we'll launch (before the summary, so its hint is right) ─
+    # Whether to launch (independent of the headless/interactive mode):
+    #   - explicit --launch/--no-launch wins;
+    #   - otherwise skip if we scaffolded natively (structure already built) or the
+    #     tool CLI wasn't ensured; else launch to build the workspace via the agent.
     if do_launch is None:
-        do_launch = assume_yes or Confirm.ask(
-            f"    Launch {tool.display_name} now to run aiws-workspace-init?",
-            default=True,
-            console=console,
-        )
+        do_launch = check_tool_cli and not scaffold
+
+    # ── 8. Summary ────────────────────────────────────────────────────────────
+    _print_summary(
+        tool, target, track_market,
+        scaffolded=bool(scaffold), launching=bool(do_launch), headless=auto,
+    )
+
+    # ── 9. Launch the agent to run aiws-workspace-init ────────────────────────
     if do_launch:
         # Ensure the tool is authenticated before launching — an unauthenticated
         # CLI (e.g. `copilot -p`) errors out with "No authentication information
-        # found" instead of running the init skill. Fires for every launch; a
-        # confirmed sign-in (token/gh) short-circuits without prompting.
-        if check_tool_cli:
-            if not ensure_authenticated(tool, assume_yes=assume_yes):
-                console.print("  [yellow]Launch skipped until authentication is complete.[/yellow]")
-                do_launch = False
+        # found" instead of running the init skill. A confirmed sign-in
+        # (token/gh) short-circuits without prompting.
+        if check_tool_cli and not ensure_authenticated(tool, assume_yes=assume_yes):
+            console.print("  [yellow]Launch skipped until authentication is complete.[/yellow]")
+            do_launch = False
     if do_launch:
         console.print()
-        launch_agent(tool, headless=auto)
+        launch_agent(tool, headless=auto)  # auto is the default → headless
 
 
 @cli.command()
@@ -211,8 +200,9 @@ def init(
     default=None,
     help="AI tool to use (default: read from .aiws/config.toml, else prompt).",
 )
-@click.option("--auto", is_flag=True,
-              help="Run headless (auto-approved) end-to-end without confirmations.")
+@click.option("--auto/--interactive", "auto", default=True,
+              help="Run headless & auto-approved end-to-end (default), or "
+                   "interactively with per-action approvals (--interactive).")
 @click.option(
     "--input", "--source", "inputs",
     multiple=True,
@@ -306,7 +296,7 @@ def ingest(
     )
     console.print("      Pipeline : aiws-raw-to-markdown → aiws-create-knowledge"
                   + (" → aiws-validate-knowledge" if do_validate else ""))
-    console.print(f"      Mode     : {'headless (--auto)' if auto else 'interactive'}")
+    console.print(f"      Mode     : {'headless (auto)' if auto else 'interactive'}")
     console.print()
     if not assume_yes and not Confirm.ask("    Proceed?", default=True, console=console):
         console.print("  [yellow]Aborted.[/yellow]")
@@ -481,12 +471,28 @@ def _confirm_plan(
     return Confirm.ask("    Proceed?", default=True, console=console)
 
 
-def _print_summary(tool: AiTool, target: Path, track_market: bool, *, scaffolded: bool) -> None:
-    next_line = (
-        "  Next: your workspace structure is ready — add your own agents, skills & knowledge."
-        if scaffolded
-        else "  Next: open your AI tool here and ask it to run [bold]aiws-workspace-init[/bold]."
-    )
+def _print_summary(
+    tool: AiTool, target: Path, track_market: bool,
+    *, scaffolded: bool, launching: bool, headless: bool,
+) -> None:
+    if scaffolded:
+        next_lines = [
+            "  Next: your workspace structure is ready — add your own agents, skills "
+            "& knowledge.",
+        ]
+    elif launching:
+        mode = "headless" if headless else "interactive"
+        next_lines = [
+            f"  Launching [bold]{tool.display_name}[/bold] ({mode}) to run "
+            "[bold]aiws-workspace-init[/bold] …",
+            "  [dim]Tip: pass --scaffold for a no-agent native build, or "
+            "--interactive to approve actions.[/dim]",
+        ]
+    else:
+        next_lines = [
+            "  Next: open your AI tool here and ask it to run "
+            "[bold]aiws-workspace-init[/bold].",
+        ]
     lines = [
         "[green]✓[/green]  Workspace initialised\n",
         f"  Tool     : [bold]{tool.display_name}[/bold]",
@@ -500,7 +506,7 @@ def _print_summary(tool: AiTool, target: Path, track_market: bool, *, scaffolded
             f"  Structure: {tool.workspace_root}/  "
             "[dim](agents, codebases, docs, knowledge, references, scripts)[/dim]"
         )
-    lines += ["", next_line]
+    lines += ["", *next_lines]
     console.print()
     console.print(Panel("\n".join(lines), border_style="green", expand=False, padding=(0, 2)))
 
