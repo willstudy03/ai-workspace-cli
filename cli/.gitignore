@@ -1,0 +1,17 @@
+# Build / distribution artifacts
+dist/
+build/
+*.egg-info/
+src/*.egg-info/
+
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+
+# Note: src/aiws_cli/bundle/ is intentionally committed (offline assets shipped
+# in the wheel) and must NOT be ignored.
+

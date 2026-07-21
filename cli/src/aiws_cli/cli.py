@@ -15,11 +15,11 @@ from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
 
 from . import __version__
-from .agent_runner import launch_agent
+from .agent_runner import ensure_authenticated, launch_agent
 from .assets import AssetError, build_copy_plan, place_assets, resolve_asset_source
 from .config import AiwsConfig, save_config
 from .console import console, err_console, info, ok, step, warn
-from .deps import run_preflight
+from .deps import ensure_node, run_preflight
 from .proc import run_cli
 from .tools import TOOL_ORDER, TOOLS, AiTool, get_tool
 
@@ -57,6 +57,9 @@ def cli() -> None:
               help="Skip installing MarkItDown during preflight.")
 @click.option("--no-git", "install_git", flag_value=False, default=True,
               help="Skip installing git during preflight.")
+@click.option("--tool-cli/--no-tool-cli", "check_tool_cli", default=True,
+              help="Check for (and offer to install via npm) the AI tool's CLI. "
+                   "Use --no-tool-cli for a pure-Python, npm-free run.")
 @click.option("--launch/--no-launch", "do_launch", default=None,
               help="Launch the AI tool to run aiws-workspace-init when done.")
 @click.option("--auto", is_flag=True,
@@ -71,6 +74,7 @@ def init(
     overwrite: bool,
     install_markitdown: bool,
     install_git: bool,
+    check_tool_cli: bool,
     do_launch: bool | None,
     auto: bool,
     assume_yes: bool,
@@ -88,10 +92,15 @@ def init(
     console.print("  [bold]Preflight[/bold]  installing dependencies")
     run_preflight(install_markitdown=install_markitdown, install_git=install_git)
 
+    tool_cli_just_installed = False
     try:
         # ── 2. Choose the AI tool ─────────────────────────────────────────────
         tool = _select_tool(tool_key, assume_yes)
-        _ensure_tool_cli(tool, assume_yes)
+        tool_cli_just_installed = False
+        if check_tool_cli:
+            tool_cli_just_installed = _ensure_tool_cli(tool, assume_yes)
+        else:
+            info("Skipping AI tool CLI check (--no-tool-cli); no npm/Node required.")
 
         # ── 3. Skill-market tracking ──────────────────────────────────────────
         if track_market is None:
@@ -150,12 +159,22 @@ def init(
     # --auto implies launching (headless) unless the user explicitly said --no-launch.
     if auto and do_launch is None:
         do_launch = True
+    # Without the tool CLI ensured, don't offer to launch unless explicitly asked.
+    if not check_tool_cli and do_launch is None and not auto:
+        do_launch = False
     if do_launch is None:
         do_launch = assume_yes or Confirm.ask(
             f"    Launch {tool.display_name} now to run aiws-workspace-init?",
             default=True,
             console=console,
         )
+    if do_launch:
+        # A freshly installed CLI (or a headless run that can't sign in mid-flight)
+        # needs authentication first. Gate the launch on completing sign-in.
+        if check_tool_cli and (tool_cli_just_installed or auto):
+            if not ensure_authenticated(tool, assume_yes=assume_yes):
+                console.print("  [yellow]Launch skipped until authentication is complete.[/yellow]")
+                do_launch = False
     if do_launch:
         console.print()
         launch_agent(tool, headless=auto)
@@ -201,36 +220,49 @@ def _select_tool(tool_key: str | None, assume_yes: bool) -> AiTool:
     return TOOLS[TOOL_ORDER[0]]
 
 
-def _ensure_tool_cli(tool: AiTool, assume_yes: bool) -> None:
-    """Verify the tool CLI is on PATH; offer to install it if missing."""
+def _ensure_tool_cli(tool: AiTool, assume_yes: bool) -> bool:
+    """Verify the tool CLI is on PATH; offer to install it (and Node/npm) if missing.
+
+    Returns True if the CLI was *newly installed* during this call (so the caller
+    knows the user likely still needs to authenticate).
+    """
     if shutil.which(tool.cli_command):
         ok(f"{tool.display_name} CLI found ('{tool.cli_command}')")
-        return
+        return False
 
     warn(f"{tool.display_name} CLI ('{tool.cli_command}') is not installed.")
     info(f"Install command: {tool.install_hint}")
 
     npm = shutil.which("npm")
     if not npm:
-        warn("npm not found — install Node.js/npm first, then run the command above.")
-        return
+        # npm is required to install the tool CLI — offer to install Node.js first.
+        warn("npm not found — it is required to install the tool CLI.")
+        install_node = assume_yes or Confirm.ask(
+            "    Install Node.js (includes npm) now?", default=True, console=console
+        )
+        if install_node and ensure_node(auto_install=True):
+            npm = shutil.which("npm")
+        if not npm:
+            warn("Skipping tool CLI install — install Node.js/npm, then re-run aiws init.")
+            return False
 
     do_install = assume_yes or Confirm.ask(
         f"    Install {tool.display_name} now with npm?", default=True, console=console
     )
     if not do_install:
-        return
+        return False
 
     info(f"Running: {tool.install_hint}")
     try:
         result = run_cli(tool.install_hint.split())
     except OSError as exc:
         warn(f"Could not run the installer ({exc}). Install manually: {tool.install_hint}")
-        return
+        return False
     if result.returncode == 0 and shutil.which(tool.cli_command):
         ok(f"{tool.display_name} installed.")
-    else:
-        warn(f"Could not install {tool.display_name} automatically — install it manually later.")
+        return True
+    warn(f"Could not install {tool.display_name} automatically — install it manually later.")
+    return False
 
 
 def _confirm_plan(

@@ -27,11 +27,25 @@ class AiTool:
     instruction_dest: str  # path (relative to target dir) where it should land
     skills_src: str  # skills dir relative to source root
     skills_dest: str  # skills dir relative to target dir
+    auth_env_vars: tuple[str, ...] = ()  # if any is set, the tool is likely authenticated
+    login_hint: str = ""  # human guidance for completing first-time authentication
 
     @property
     def instruction_filename(self) -> str:
         """Bare filename of the instruction file (e.g. ``copilot-instructions.md``)."""
         return self.instruction_src.rsplit("/", 1)[-1]
+
+    def login_argv(self) -> list[str]:
+        """Return the argv that starts the tool's interactive authentication flow.
+
+        Codex exposes a dedicated ``login`` subcommand. Claude Code and GitHub
+        Copilot authenticate on first interactive run (browser/device or a
+        ``/login`` slash command), so we open the interactive session and let the
+        user complete sign-in, then exit to return to aiws.
+        """
+        if self.key == "codex":
+            return [self.cli_command, "login"]
+        return [self.cli_command]
 
     def launch_argv(self, prompt: str) -> list[str]:
         """Return the argv used to open the tool interactively with a starting prompt."""
@@ -68,6 +82,11 @@ TOOLS: dict[str, AiTool] = {
         instruction_dest="CLAUDE.md",
         skills_src=".claude/skills",
         skills_dest=".claude/skills",
+        auth_env_vars=("ANTHROPIC_API_KEY",),
+        login_hint=(
+            "On first run Claude Code prompts you to sign in (browser OAuth). "
+            "Complete sign-in, then type /exit (or press Ctrl-D) to return to aiws."
+        ),
     ),
     "copilot": AiTool(
         key="copilot",
@@ -79,6 +98,11 @@ TOOLS: dict[str, AiTool] = {
         instruction_dest=".github/copilot-instructions.md",
         skills_src=".github/skills",
         skills_dest=".github/skills",
+        auth_env_vars=("GH_TOKEN", "GITHUB_TOKEN"),
+        login_hint=(
+            "In the Copilot session, run /login to authenticate with your GitHub "
+            "account, then run /exit (or press Ctrl-D) to return to aiws."
+        ),
     ),
     "codex": AiTool(
         key="codex",
@@ -90,6 +114,11 @@ TOOLS: dict[str, AiTool] = {
         instruction_dest="AGENTS.md",
         skills_src=".codex/skills",
         skills_dest=".codex/skills",
+        auth_env_vars=("OPENAI_API_KEY",),
+        login_hint=(
+            "Codex opens a sign-in flow (ChatGPT account or API key). Complete it "
+            "to finish authentication; aiws continues automatically afterwards."
+        ),
     ),
 }
 

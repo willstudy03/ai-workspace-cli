@@ -184,4 +184,78 @@ def _install_git() -> bool:
         return False
 
 
+# ── Node.js / npm ────────────────────────────────────────────────────────────
+
+
+def ensure_node(*, auto_install: bool) -> bool:
+    """Ensure Node.js/npm is installed; install it when requested.
+
+    npm is how the AI tool CLIs (Claude Code, GitHub Copilot, OpenAI Codex) are
+    installed, so ``aiws init`` needs it to offer to install a missing tool CLI.
+    Returns True if npm is available afterwards.
+    """
+    if shutil.which("npm"):
+        ok("Node.js/npm found")
+        return True
+
+    if not auto_install:
+        warn("npm not found — needed to install AI tool CLIs (claude/copilot/codex).")
+        info("Install Node.js (includes npm) from https://nodejs.org/en/download")
+        return False
+
+    if _install_node() and shutil.which("npm"):
+        ok("Node.js/npm installed")
+        return True
+
+    # On Windows a freshly installed npm often isn't on the current shell's PATH.
+    if shutil.which("npm"):
+        ok("Node.js/npm installed")
+        return True
+    warn("Node.js/npm could not be installed (or isn't on PATH in this shell yet).")
+    info("Install manually from https://nodejs.org/en/download, then re-run aiws init.")
+    return False
+
+
+def _install_node() -> bool:
+    """Best-effort Node.js (LTS) installation using the platform's package manager."""
+    system = platform.system()
+    info("Installing Node.js LTS (includes npm) ...")
+    try:
+        if system == "Windows":
+            if shutil.which("winget"):
+                return run_cli(
+                    [
+                        "winget", "install", "--id", "OpenJS.NodeJS.LTS", "-e",
+                        "--source", "winget",
+                        "--accept-package-agreements", "--accept-source-agreements",
+                    ]
+                ).returncode == 0
+            if shutil.which("choco"):
+                return run_cli(["choco", "install", "nodejs-lts", "-y"]).returncode == 0
+            warn("No winget/choco found to install Node.js automatically.")
+            return False
+        if system == "Darwin":
+            if shutil.which("brew"):
+                return run_cli(["brew", "install", "node"]).returncode == 0
+            warn("Homebrew not found. Install Node.js from https://nodejs.org/en/download")
+            return False
+        # Linux / other
+        if shutil.which("apt-get"):
+            run_cli(["sudo", "apt-get", "update"])
+            return run_cli(["sudo", "apt-get", "install", "-y", "nodejs", "npm"]).returncode == 0
+        if shutil.which("dnf"):
+            return run_cli(["sudo", "dnf", "install", "-y", "nodejs", "npm"]).returncode == 0
+        if shutil.which("yum"):
+            return run_cli(["sudo", "yum", "install", "-y", "nodejs", "npm"]).returncode == 0
+        if shutil.which("pacman"):
+            return run_cli(["sudo", "pacman", "-S", "--noconfirm", "nodejs", "npm"]).returncode == 0
+        if shutil.which("zypper"):
+            return run_cli(["sudo", "zypper", "install", "-y", "nodejs", "npm"]).returncode == 0
+        warn("No supported package manager found to install Node.js automatically.")
+        return False
+    except Exception as exc:  # pragma: no cover - platform dependent
+        warn(f"Node.js install error: {exc}")
+        return False
+
+
 
