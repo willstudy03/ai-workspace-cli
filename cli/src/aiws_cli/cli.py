@@ -212,6 +212,13 @@ def init(
 )
 @click.option("--auto", is_flag=True,
               help="Run headless (auto-approved) end-to-end without confirmations.")
+@click.option(
+    "--input", "--source", "inputs",
+    multiple=True,
+    type=click.Path(exists=True, dir_okay=True, file_okay=True),
+    help="File(s) or folder(s) to copy into knowledge/source/raw/ before ingesting "
+         "(repeatable).",
+)
 @click.option("--validate/--no-validate", "do_validate", default=True,
               help="Chain aiws-validate-knowledge after curation (default: on).")
 @click.option("--tool-cli/--no-tool-cli", "check_tool_cli", default=True,
@@ -223,6 +230,7 @@ def ingest(
     target_str: str,
     tool_key: str | None,
     auto: bool,
+    inputs: tuple[str, ...],
     do_validate: bool,
     check_tool_cli: bool,
     install_markitdown: bool,
@@ -233,6 +241,9 @@ def ingest(
     Converts everything in ``knowledge/source/raw/`` to Markdown and curates it into
     proper knowledge entries by launching your AI tool with a two-skill pipeline
     prompt (optionally validating afterwards).
+
+    Pass ``--input <path>`` (repeatable; files or folders) to copy sources into
+    ``knowledge/source/raw/`` first.
     """
     target = Path(target_str).expanduser().resolve()
     _print_header(target, "ingest")
@@ -240,13 +251,21 @@ def ingest(
     # ── Resolve the AI tool (flag > config > prompt) ──────────────────────────
     tool = _resolve_tool_for_ingest(tool_key, target, assume_yes)
 
+    raw_dir = target / tool.workspace_root / "knowledge" / "source" / "raw"
+
+    # ── Stage any provided inputs into source/raw/ ────────────────────────────
+    if inputs:
+        console.print()
+        console.print("  [bold]Staging[/bold]  copying inputs into knowledge/source/raw/")
+        raw_dir.mkdir(parents=True, exist_ok=True)
+        _stage_inputs(inputs, raw_dir)
+
     # ── Preflight: MarkItDown, raw content, required skills ───────────────────
     console.print()
     console.print("  [bold]Preflight[/bold]  checking ingestion prerequisites")
     manager = detect_package_manager()
     ensure_markitdown(manager, auto_install=install_markitdown)
 
-    raw_dir = target / tool.workspace_root / "knowledge" / "source" / "raw"
     if not raw_dir.is_dir():
         err(f"No knowledge/source/raw/ folder at {raw_dir}.")
         info(f"Run 'aiws init --tool {tool.key}' first, then add files to ingest.")
@@ -327,6 +346,44 @@ def _resolve_tool_for_ingest(tool_key: str | None, target: Path, assume_yes: boo
             ok(f"Using tool from .aiws/config.toml: {tool.display_name}")
             return tool
     return _select_tool(None, assume_yes)
+
+
+def _stage_inputs(inputs: tuple[str, ...], raw_dir: Path) -> int:
+    """Copy each input file (or the files inside an input folder) into raw_dir.
+
+    Non-destructive: existing same-named files are skipped. Returns the count staged.
+    """
+    staged = 0
+    for item in inputs:
+        src_path = Path(item).expanduser().resolve()
+        if src_path.is_dir():
+            files = sorted(p for p in src_path.iterdir() if p.is_file())
+            if not files:
+                warn(f"No files in folder: {src_path}")
+        elif src_path.is_file():
+            files = [src_path]
+        else:
+            warn(f"Skipping (not a file or folder): {src_path}")
+            continue
+
+        for src in files:
+            dest = raw_dir / src.name
+            if dest.exists():
+                warn(f"Already in source/raw: {src.name} (skipped)")
+                continue
+            try:
+                shutil.copy2(src, dest)
+            except OSError as exc:
+                warn(f"Could not copy {src.name}: {exc}")
+                continue
+            ok(f"Staged {src.name}")
+            staged += 1
+
+    if staged:
+        ok(f"Staged {staged} file(s) into knowledge/source/raw/")
+    else:
+        warn("No new files staged.")
+    return staged
 
 
 def _select_tool(tool_key: str | None, assume_yes: bool) -> AiTool:

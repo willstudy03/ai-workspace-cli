@@ -190,6 +190,15 @@ Markdown, images, HTML, …) into `<root>/knowledge/source/raw/` and run:
 aiws ingest
 ```
 
+Or point `aiws ingest` straight at a file or folder and it stages them into
+`knowledge/source/raw/` for you first (repeatable; `--source` is an alias):
+
+```bash
+aiws ingest --input ./report.pdf
+aiws ingest --input ./a.docx --input ./b.xlsx
+aiws ingest --source ./docs-to-ingest/     # copies the folder's files in
+```
+
 This launches your AI tool and runs the **knowledge ingestion pipeline** as a
 two-skill chain (optionally validating afterwards):
 
@@ -208,6 +217,7 @@ else a prompt.
 
 ```bash
 aiws ingest                       # interactive: you approve each step
+aiws ingest --input ./report.pdf  # stage a file into source/raw/, then ingest
 aiws ingest --auto                # headless, hands-free, no confirmations
 aiws ingest --no-validate         # skip the validate-knowledge step
 aiws ingest --tool claude -y      # preselect tool, accept defaults
