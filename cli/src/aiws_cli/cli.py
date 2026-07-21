@@ -21,6 +21,7 @@ from .config import AiwsConfig, save_config
 from .console import console, err_console, info, ok, step, warn
 from .deps import ensure_node, run_preflight
 from .proc import run_cli
+from .scaffold import scaffold_workspace
 from .tools import TOOL_ORDER, TOOLS, AiTool, get_tool
 
 # Upstream repo used when "track the skill market" is enabled and no local checkout
@@ -64,6 +65,9 @@ def cli() -> None:
               help="Launch the AI tool to run aiws-workspace-init when done.")
 @click.option("--auto", is_flag=True,
               help="Launch the AI tool headless (auto-approved) and run the init skill to completion.")
+@click.option("--scaffold/--no-scaffold", "scaffold", default=None,
+              help="Create the full workspace folder tree directly in Python "
+                   "(no agent, no per-action permission prompts).")
 @click.option("-y", "--yes", "assume_yes", is_flag=True, help="Accept defaults; no prompts.")
 def init(
     target_str: str,
@@ -77,6 +81,7 @@ def init(
     check_tool_cli: bool,
     do_launch: bool | None,
     auto: bool,
+    scaffold: bool | None,
     assume_yes: bool,
 ) -> None:
     """Set up an AI-agent workspace in the current (or given) directory."""
@@ -143,6 +148,19 @@ def init(
         cfg_path = save_config(target, cfg)
         ok(f"Wrote {cfg_path.relative_to(target)}")
 
+        # ── 6b. Native scaffold (deterministic, no agent, no permission prompts)
+        if scaffold is None:
+            scaffold = assume_yes or Confirm.ask(
+                "    Create the full workspace structure now "
+                "(directly, no agent or per-action confirmations)?",
+                default=True,
+                console=console,
+            )
+        if scaffold:
+            step("Scaffolding", "workspace structure")
+            for line in scaffold_workspace(target / tool.workspace_root, overwrite=overwrite):
+                info(line)
+
     except AssetError as exc:
         err_console.print(f"Error: {exc}")
         sys.exit(1)
@@ -151,7 +169,7 @@ def init(
         sys.exit(1)
 
     # ── 7. Summary ────────────────────────────────────────────────────────────
-    _print_summary(tool, target, track_market)
+    _print_summary(tool, target, track_market, scaffolded=bool(scaffold))
 
     # ── 8. Launch the agent to run aiws-workspace-init ────────────────────────
     # --auto implies launching (headless) unless the user explicitly said --no-launch.
@@ -159,6 +177,9 @@ def init(
         do_launch = True
     # Without the tool CLI ensured, don't offer to launch unless explicitly asked.
     if not check_tool_cli and do_launch is None and not auto:
+        do_launch = False
+    # If we already scaffolded natively, the agent isn't needed to build structure.
+    if scaffold and do_launch is None and not auto:
         do_launch = False
     if do_launch is None:
         do_launch = assume_yes or Confirm.ask(
@@ -286,16 +307,25 @@ def _confirm_plan(
     return Confirm.ask("    Proceed?", default=True, console=console)
 
 
-def _print_summary(tool: AiTool, target: Path, track_market: bool) -> None:
+def _print_summary(tool: AiTool, target: Path, track_market: bool, *, scaffolded: bool) -> None:
+    next_line = (
+        "  Next: your workspace structure is ready — add your own agents, skills & knowledge."
+        if scaffolded
+        else "  Next: open your AI tool here and ask it to run [bold]aiws-workspace-init[/bold]."
+    )
     lines = [
         "[green]✓[/green]  Workspace initialised\n",
         f"  Tool     : [bold]{tool.display_name}[/bold]",
         f"  Target   : {target}",
         f"  Skills   : {tool.skills_dest}/  [dim](10 built-in aiws-* skills)[/dim]",
         f"  Config   : .aiws/config.toml  [dim](track_market={'on' if track_market else 'off'})[/dim]",
-        "",
-        "  Next: open your AI tool here and ask it to run [bold]aiws-workspace-init[/bold].",
     ]
+    if scaffolded:
+        lines.append(
+            f"  Structure: {tool.workspace_root}/  "
+            "[dim](agents, codebases, docs, knowledge, references, scripts)[/dim]"
+        )
+    lines += ["", next_line]
     console.print()
     console.print(Panel("\n".join(lines), border_style="green", expand=False, padding=(0, 2)))
 

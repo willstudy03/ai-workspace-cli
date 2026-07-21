@@ -35,6 +35,14 @@ class AiTool:
         """Bare filename of the instruction file (e.g. ``copilot-instructions.md``)."""
         return self.instruction_src.rsplit("/", 1)[-1]
 
+    @property
+    def workspace_root(self) -> str:
+        """Tool workspace root relative to the target dir (e.g. ``.github``).
+
+        Derived from the skills destination (``.github/skills`` -> ``.github``).
+        """
+        return self.skills_dest.rsplit("/", 1)[0]
+
     def login_argv(self) -> list[str]:
         """Return the argv that starts the tool's interactive authentication flow.
 

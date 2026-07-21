@@ -101,6 +101,26 @@ What it does, in order:
 
 Your choices are saved to `<workspace>/.aiws/config.toml`.
 
+### Direct scaffolding (no agent, no permission prompts)
+
+When you launch an AI tool to run `aiws-workspace-init`, it asks you to approve
+each file/folder it creates. To skip all of that, `aiws` can build the **entire
+workspace folder tree itself in Python** — instantly, deterministically, and with
+no per-action confirmations:
+
+```bash
+aiws init --scaffold        # create the structure directly, then stop (no launch)
+```
+
+This creates the full tree under the tool's workspace root (`.github/`, `.claude/`,
+or `.codex/`) and seeds every folder with a standards-compliant `example-*` file
+(agents, skills, references, knowledge/{concepts,systems,workflows,policies,how-to,
+references,raw}, codebases, docs, scripts). It's **additive and idempotent** —
+existing files are skipped (use `--overwrite` to replace). By default the wizard
+offers this; when scaffolding is done the agent launch is skipped (the structure
+already exists). The generated files match the `aiws-workspace-init` skill and pass
+`aiws-validate-skill` / `aiws-validate-knowledge`.
+
 ### Using aiws without npm (pure Python)
 
 `aiws` itself is a pure-Python package (installed via pip/uv) — **npm/Node is never
@@ -131,6 +151,7 @@ aiws init --upstream <git-url>    # track a specific upstream repo (blank by def
 aiws init --ref <branch>          # dedicated branch to pull skill updates from
 aiws init --no-track              # don't track an upstream skill market
 aiws init --no-launch             # set up files but don't open the AI tool
+aiws init --scaffold              # build the full workspace tree directly (no agent)
 aiws init --no-tool-cli           # pure-Python run: don't check/install the tool CLI (no npm)
 aiws init --auto                  # launch the AI tool headless and run init to completion
 aiws init --no-git                # skip installing git during preflight
