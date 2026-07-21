@@ -1,6 +1,6 @@
 [project]
 name = "aiws-cli"
-version = "0.3.0"
+version = "0.3.1"
 description = "aiws — bootstrap an AI-agent workspace (skills + knowledge) for Claude Code, GitHub Copilot, or OpenAI Codex"
 readme = "README.md"
 requires-python = ">=3.11"

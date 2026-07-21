@@ -4,6 +4,14 @@ All notable changes to the `aiws` CLI are documented here. The format is based o
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.1] — 2026-07-21
+
+### Fixed
+- Windows: launching an npm `.cmd`/`.bat` shim (claude/copilot/codex/npm) failed with
+  `'C:\Users\<name>' is not recognized …` when the path or an argument contained a
+  space (e.g. a `C:\Users\End User\…` profile). `run_cli` now invokes shims via
+  `cmd /s /c "<command>"` with proper quoting so spaces are preserved.
+
 ## [0.3.0] — 2026-07-21
 
 ### Added

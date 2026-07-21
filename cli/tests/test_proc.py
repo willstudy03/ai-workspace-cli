@@ -30,16 +30,22 @@ def test_run_cli_runs_binary_directly_on_posix(monkeypatch):
 def test_run_cli_wraps_cmd_shim_on_windows(monkeypatch):
     captured = {}
 
-    def fake_run(argv, **kw):
-        captured["argv"] = argv
+    def fake_run(cmd, **kw):
+        captured["cmd"] = cmd
         class R:
             returncode = 0
         return R()
 
-    monkeypatch.setattr(proc.shutil, "which", lambda c: r"C:\npm\tool.CMD")
+    # Shim path AND an argument both contain spaces (the reported "End User" case).
+    monkeypatch.setattr(proc.shutil, "which", lambda c: r"C:\Users\End User\npm\tool.CMD")
     monkeypatch.setattr(proc.os, "name", "nt")
     monkeypatch.setattr(proc.subprocess, "run", fake_run)
-    proc.run_cli(["tool", "-x"])
-    assert captured["argv"][:2] == ["cmd", "/c"]
-    assert captured["argv"][2].endswith("tool.CMD")
+    proc.run_cli(["tool", "-p", "a b c"])
+
+    cmd = captured["cmd"]
+    assert isinstance(cmd, str)
+    assert cmd.startswith("cmd /s /c ")
+    # The shim path (with its space) stays quoted, as does the spaced argument.
+    assert '"C:\\Users\\End User\\npm\\tool.CMD"' in cmd
+    assert '"a b c"' in cmd
 

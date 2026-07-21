@@ -73,8 +73,11 @@ class AiTool:
         tool's documented "let it act" modes.
         """
         if self.key == "claude":
-            # Print mode + auto-accept file edits (scaffolding writes files).
-            return [self.cli_command, "-p", prompt, "--permission-mode", "acceptEdits"]
+            # Print mode + bypass all permission prompts. acceptEdits only covers
+            # Edit/Write/NotebookEdit, but aiws-workspace-init also runs Bash
+            # (mkdir, ls, find) which acceptEdits does not auto-approve, and -p
+            # mode has no TTY to resolve a prompt for it.
+            return [self.cli_command, "-p", prompt, "--permission-mode", "bypassPermissions"]
         if self.key == "codex":
             # Non-interactive exec subcommand with workspace-write auto approvals.
             return [self.cli_command, "exec", "--full-auto", prompt]

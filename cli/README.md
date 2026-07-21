@@ -78,7 +78,7 @@ What it does, in order:
 
    | Tool           | Headless (default)                                         | Interactive (`--interactive`) |
    |----------------|------------------------------------------------------------|-------------------------------|
-   | Claude Code    | `claude -p "<prompt>" --permission-mode acceptEdits`       | `claude "<prompt>"`           |
+   | Claude Code    | `claude -p "<prompt>" --permission-mode bypassPermissions` | `claude "<prompt>"`           |
    | GitHub Copilot | `copilot -p "<prompt>" --allow-all-tools --allow-all-paths`| `copilot -i "<prompt>"`       |
    | OpenAI Codex   | `codex exec --full-auto "<prompt>"`                        | `codex "<prompt>"`            |
 
@@ -244,6 +244,43 @@ CI (`.gitlab-ci.yml`) runs lint + tests, a **bundle-drift check** (fails if the
 committed bundle is out of sync with the canonical skills — run
 `bash cli/scripts/sync_bundle.sh` and commit), and `release.sh` to build and verify
 the wheel. Tagging `vX.Y.Z` enables a manual publish job.
+
+## Standalone / beta release (separate repo)
+
+The `cli/` folder is **self-contained** — the built-in skills are committed inside it
+at `src/aiws_cli/bundle/`, so a copy of `cli/` installs and runs on its own. To cut a
+beta from a separate GitLab repo:
+
+1. **Create the repo** and copy the **contents of `cli/`** to become its root
+   (`pyproject.toml`, `install.py`, `README.md`, `src/`, `scripts/`, `tests/`).
+2. **Also copy `.gitattributes`** from the monorepo root (keeps the bundle's line
+   endings stable).
+3. Users install with `python install.py` (run from the repo root now — no `cd cli`)
+   or `pip install .`; build/publish with `bash scripts/release.sh [--publish]`.
+
+`sync_bundle.sh` / `release.sh` **degrade gracefully** in a standalone repo: since the
+canonical `.github/.claude/.codex` folders aren't present, they keep the committed
+bundle instead of regenerating (regenerate only in the monorepo when skills change).
+
+Minimal standalone CI (`.gitlab-ci.yml` at the new repo root):
+
+```yaml
+default: { image: python:3.12-slim }
+stages: [lint, test, build]
+lint:
+  stage: lint
+  script: [ "pip install ruff", "ruff check src tests" ]
+test:
+  stage: test
+  script: [ "pip install pytest", "python -m pytest -q" ]
+build:
+  stage: build
+  script: [ "pip install build", "python -m build" ]
+  artifacts: { paths: ["dist/*"], expire_in: 1 week }
+```
+
+> The monorepo's root `.gitlab-ci.yml` (with the canonical bundle-drift check) is for
+> this repo; the standalone repo uses the lighter pipeline above.
 
 ## Releasing / Publishing to PyPI
 

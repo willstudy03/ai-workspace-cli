@@ -33,7 +33,7 @@ def test_headless_argv():
         "copilot", "-p", "P", "--allow-all-tools", "--allow-all-paths",
     ]
     assert TOOLS["claude"].headless_argv("P") == [
-        "claude", "-p", "P", "--permission-mode", "acceptEdits",
+        "claude", "-p", "P", "--permission-mode", "bypassPermissions",
     ]
     assert TOOLS["codex"].headless_argv("P") == ["codex", "exec", "--full-auto", "P"]
 

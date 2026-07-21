@@ -11,6 +11,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 BUNDLE="$SCRIPT_DIR/../src/aiws_cli/bundle"
 
+# If the canonical tool folders are not present (e.g. this is a standalone,
+# cli-only repository), keep the already-committed bundle and skip regeneration.
+if [ ! -f "$REPO_ROOT/CLAUDE.md" ] \
+  || [ ! -f "$REPO_ROOT/AGENTS.md" ] \
+  || [ ! -f "$REPO_ROOT/.github/copilot-instructions.md" ]; then
+  echo "Canonical tool folders not found under $REPO_ROOT."
+  echo "Keeping the committed bundle at $BUNDLE (standalone repo — nothing to regenerate)."
+  exit 0
+fi
+
 # tool-key | instruction source (relative to repo root) | skills source dir
 map=(
   "claude|CLAUDE.md|.claude/skills"
