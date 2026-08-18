@@ -3,7 +3,7 @@ name: "aiws-codebase-analyst"
 description: "Analyzes an existing codebase and organizes it into structured, durable documentation — architecture, modules, patterns, standards, and a machine-readable index — that lets humans and AI agents quickly understand the project. Produces documentation only, never code."
 tags: ["codebase", "architecture", "modules", "documentation", "analysis", "knowledge-base"]
 applies-to: ["any"]
-author: "William Theo (IT RDI IM TD)"
+author: ""
 last-updated: "2026-07-14"
 ---
 

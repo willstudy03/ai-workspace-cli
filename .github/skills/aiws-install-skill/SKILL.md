@@ -4,7 +4,7 @@ version: "1.0.0"
 description: "Guides users through installing skills, agents, scripts, or references from the agent-skills repo into their global Copilot configuration (~/.copilot/) or a project-based .github/ folder, including automatic dependency resolution and pre-install sync with the tracked upstream branch (if configured)."
 tags: ["install", "setup", "copilot", "skills", "agents", "references"]
 applies-to: ["agent-skills repo"]
-author: "William Theo (IT RDI IM TD)"
+author: ""
 last-updated: "2026-06-24"
 ---
 

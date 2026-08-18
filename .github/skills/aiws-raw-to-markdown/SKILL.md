@@ -4,7 +4,7 @@ version: "1.0.0"
 description: "Converts non-Markdown source files dropped in knowledge/source/raw/ (PDF, Word, PowerPoint, Excel, images, audio, HTML, CSV/JSON/XML, EPub, ZIP, and more) into Markdown using Microsoft's open-source MarkItDown tool, writing the output back under knowledge/source/raw/ so aiws-create-knowledge can curate it into proper knowledge entries."
 tags: ["knowledge", "conversion", "markitdown", "raw", "ingestion"]
 applies-to: ["agent-skills repo", "aiws workspace"]
-author: "William Theo (IT RDI IM TD)"
+author: ""
 last-updated: "2026-07-20"
 ---
 

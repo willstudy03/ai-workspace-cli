@@ -4,7 +4,7 @@ version: "1.0.0"
 description: "Grounded question-answering over the knowledge/ layer — a lightweight RAG-style workflow that searches curated knowledge entries, answers strictly from what is documented with citations, and explicitly says when something is not documented instead of guessing."
 tags: ["rag", "knowledge", "retrieval", "grounding", "qa"]
 applies-to: ["agent-skills repo", "any project with a knowledge/ folder"]
-author: "William Theo (IT RDI IM TD)"
+author: ""
 last-updated: "2026-07-20"
 ---
 

@@ -4,7 +4,7 @@ version: "1.0.0"
 description: "Validates newly added knowledge entries against the knowledge/ layer taxonomy and YAML front-matter schema. Compares the current branch against the base branch, finds every new knowledge file, checks folder placement, filename casing, required front-matter fields, and body structure, then reports a clear pass/fail result with actionable fixes. No files are created or modified."
 tags: ["validation", "knowledge", "standards", "repo-health"]
 applies-to: ["agent-skills repo"]
-author: "William Theo (IT RDI IM TD)"
+author: ""
 last-updated: "2026-07-20"
 ---
 

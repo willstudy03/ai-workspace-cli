@@ -4,7 +4,7 @@ version: "1.0.0"
 description: "Validates newly added Skills, Agents, Scripts, References, and Codebase docs against the repo's predefined directory structure and file format rules. Compares the current branch against the base branch, identifies all new files, checks their placement and content format, then reports a clear pass/fail result with actionable fix instructions. No files are created or modified."
 tags: ["validation", "ci", "standards", "repo-health"]
 applies-to: ["agent-skills repo"]
-author: "William Theo (IT RDI IM TD)"
+author: ""
 last-updated: "2026-06-24"
 ---
 

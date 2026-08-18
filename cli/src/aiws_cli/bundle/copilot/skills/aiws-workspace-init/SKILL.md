@@ -4,7 +4,7 @@ version: "1.0.0"
 description: "Scaffolds the complete agent-skills workspace file structure (agents, codebases, docs, knowledge, references, scripts, skills) into a project's .github/ folder or the user's global ~/.copilot/ folder, seeding every folder with a standards-compliant example file so users get a well-organized, ready-to-use layout."
 tags: ["init", "scaffold", "setup", "workspace", "bootstrap"]
 applies-to: ["agent-skills repo", "any project"]
-author: "William Theo (IT RDI IM TD)"
+author: ""
 last-updated: "2026-07-20"
 ---
 

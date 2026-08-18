@@ -3,7 +3,7 @@ name: "aiws-install-skill"
 description: "Guides users through installing skills, agents, scripts, or references from the agent-skills repo into their global Codex configuration (~/.codex/) or a project-based .codex/ folder, including automatic dependency resolution and pre-install sync with the tracked upstream branch (if configured)."
 tags: ["install", "setup", "codex", "skills", "agents", "references"]
 applies-to: ["agent-skills repo"]
-author: "William Theo (IT RDI IM TD)"
+author: ""
 last-updated: "2026-06-24"
 ---
 

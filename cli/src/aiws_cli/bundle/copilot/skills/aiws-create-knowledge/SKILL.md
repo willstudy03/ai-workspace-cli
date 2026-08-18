@@ -4,7 +4,7 @@ version: "1.0.0"
 description: "Curates raw Markdown dropped in knowledge/source/raw/ into standards-compliant knowledge entries — classifying each file by type (concept, system, workflow, policy, how-to, reference), regenerating it to match that type's example format and front-matter schema, and placing it in the correct taxonomy folder, processing files strictly one-at-a-time to preserve full context."
 tags: ["knowledge", "curation", "authoring", "taxonomy", "standards"]
 applies-to: ["agent-skills repo", "aiws workspace"]
-author: "William Theo (IT RDI IM TD)"
+author: ""
 last-updated: "2026-07-20"
 ---
 

@@ -3,7 +3,7 @@ name: "aiws-install-knowledge"
 description: "Guides users through installing knowledge entries (concepts, systems, workflows, policies, how-tos, references) from the agent-skills repo's knowledge/ layer into their global Codex configuration (~/.codex/knowledge/) or a project-based .codex/knowledge/ folder, resolving related cross-linked entries and syncing with the tracked upstream branch first (if configured)."
 tags: ["install", "setup", "codex", "knowledge", "documentation"]
 applies-to: ["agent-skills repo"]
-author: "William Theo (IT RDI IM TD)"
+author: ""
 last-updated: "2026-07-20"
 ---
 

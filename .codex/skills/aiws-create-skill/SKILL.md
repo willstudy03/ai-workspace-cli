@@ -3,7 +3,7 @@ name: "aiws-create-skill"
 description: "Interactive skill authoring workflow that creates new, standards-compliant SKILL.md files for this workspace — it clarifies the requirement, asks about unclear implementation steps and which tools (MCP/CLI) will be invoked, and first searches the knowledge/ and skills/ folders for reusable context before writing the skill."
 tags: ["meta", "authoring", "skills", "scaffold", "standards"]
 applies-to: ["agent-skills repo", "aiws workspace"]
-author: "William Theo (IT RDI IM TD)"
+author: ""
 last-updated: "2026-07-20"
 ---
 

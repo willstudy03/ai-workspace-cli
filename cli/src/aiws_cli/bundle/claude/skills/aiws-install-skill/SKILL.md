@@ -3,7 +3,7 @@ name: "aiws-install-skill"
 description: "Guides users through installing skills, agents, scripts, or references from the agent-skills repo into their global Claude Code configuration (~/.claude/) or a project-based .claude/ folder, including automatic dependency resolution and pre-install sync with the tracked upstream branch (if configured)."
 tags: ["install", "setup", "claude", "skills", "agents", "references"]
 applies-to: ["agent-skills repo"]
-author: "William Theo (IT RDI IM TD)"
+author: ""
 last-updated: "2026-06-24"
 ---
 
